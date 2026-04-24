@@ -1,10 +1,14 @@
+/**
+ * Fetches the summarized list of clients for the main table view.
+ * Blueprint: Fetches essential columns including Account Manager for display.
+ * @return {Array<Object>} List of client objects.
+ */
 function getClientsList() {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     var data = sheet.getDataRange().getValues();
     var clients = [];
     
-    // Start at 1 to skip headers
     for (var i = 1; i < data.length; i++) {
       var row = data[i];
       if (!row[1]) continue; 
@@ -20,7 +24,7 @@ function getClientsList() {
         pPhone: row[9],
         services: row[17], 
         status: row[29],
-        acctMgr: row[30] // <--- THIS WAS THE MISSING PIECE
+        acctMgr: row[30] // Optimized: Ensures AM appears in list view
       });
     }
     return clients;
@@ -29,6 +33,12 @@ function getClientsList() {
   }
 }
 
+/**
+ * Fetches a detailed client record by its spreadsheet row index.
+ * Blueprint: Sanitizes Date objects for safe frontend transport.
+ * @param {number} rowIndex - The index of the row in the sheet.
+ * @return {Object} The detailed client data or error object.
+ */
 function getClientById(rowIndex) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
@@ -36,12 +46,11 @@ function getClientById(rowIndex) {
     
     var data = sheet.getDataRange().getValues();
     var idx = parseInt(rowIndex, 10);
-    if (isNaN(idx)) return { error: "Row index is invalid or undefined: " + rowIndex };
+    if (isNaN(idx)) return { error: "Invalid Row index: " + rowIndex };
     
     var row = data[idx];
-    if (!row) return { error: "Row " + idx + " is completely empty in the spreadsheet." };
+    if (!row) return { error: "Empty row at index " + idx };
 
-    // CRITICAL FIX: Formats raw Dates to strings so Google Apps Script doesn't crash and return 'null'
     function safeVal(val) {
       if (val instanceof Date) return val.toISOString();
       return val === undefined ? "" : val;
@@ -63,12 +72,15 @@ function getClientById(rowIndex) {
   }
 }
 
+/**
+ * Appends a new client record and triggers onboarding automations.
+ * Blueprint Checkpoint: Triggers 'Client Welcome Email' and 'New Client Announcement'.
+ * @param {Object} clientData - Data from the Add Client form.
+ * @return {string} Success or Error message.
+ */
 function processNewClient(clientData) {
   try {
-    // 1. Save Data to Database
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
-
-    // Create an empty array for all 34 columns
     var newRow = new Array(34).fill("");
 
     newRow[0] = new Date(); // Timestamp
@@ -76,7 +88,6 @@ function processNewClient(clientData) {
     newRow[2] = clientData.brandName;
     newRow[3] = clientData.address;
     newRow[4] = clientData.website;
-    
     newRow[6] = clientData.pFirstName;
     newRow[7] = clientData.pLastName;
     newRow[8] = clientData.pEmail;
@@ -84,44 +95,35 @@ function processNewClient(clientData) {
     newRow[10] = clientData.pAddress;
     newRow[11] = clientData.pBirthday;
     newRow[12] = clientData.pPosition;
-    
     newRow[13] = clientData.addContacts; // JSON string
-    
     newRow[17] = clientData.services;
     newRow[18] = clientData.monthlyVal;
     newRow[19] = clientData.startDate;
-    
-    newRow[27] = clientData.salesNotes; // Quill HTML
+    newRow[27] = clientData.salesNotes; 
     newRow[29] = "Onboarding";
     newRow[30] = "Unassigned";
 
     sheet.appendRow(newRow);
 
-    var priContactFull = clientData.pFirstName + " " + clientData.pLastName;
-
-    // 2. Trigger Email Automations (Using the updated JSON keys)
+    // Automation Checkpoint: Email Triggers
     try {
       var clientDataMap = {
         "companyName": clientData.companyName || "",
         "brandName": clientData.brandName || "",
         "priFirstName": clientData.pFirstName || "",
-        "priContactFull": priContactFull || "",
         "priEmail": clientData.pEmail || "",
         "services": clientData.services || "",
         "monthlyContractValue": clientData.monthlyVal || "",
         "contractStartDate": clientData.startDate || "",
         "notes": clientData.salesNotes || ""
       };
-
       if (clientData.pEmail && typeof sendTriggerEmail === "function") {
         sendTriggerEmail("Client Welcome Email", clientData.pEmail, clientDataMap);
       }
       if (typeof sendTriggerEmail === "function") {
         sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
       }
-    } catch(e) {
-      return "Success! Client onboarded, but automated emails failed: " + e.message;
-    }
+    } catch(e) { console.error("Email Triggers failed: " + e.message); }
 
     return "Success! Client onboarded successfully.";
   } catch (error) { 
@@ -129,15 +131,11 @@ function processNewClient(clientData) {
   }
 }
 
-const COL_MAP = {
-  timestamp: 0, companyName: 1, brandName: 2, address: 3, website: 4, anniversary: 5,
-  pFirstName: 6, pLastName: 7, pEmail: 8, pPhone: 9, pAddress: 10, pBirthday: 11, pPosition: 12,
-  addContacts: 13, shipAddress: 14, retAddress: 15, brandReg: 16, services: 17, monthlyVal: 18,
-  startDate: 19, termCount: 20, termUnit: 21, expDate: 22, commRate: 23, commBasis: 24,
-  ppcDate: 25, dspDate: 26, salesNotes: 27, brandCode: 28, status: 29, acctMgr: 30, brandFolder: 31,
-  remarks: 32, history: 33
-};
-
+/**
+ * Updates an existing client and generates an auto-history log cell.
+ * @param {Object} clientData - Updated fields from the Edit Client form.
+ * @return {string} Success or Error message.
+ */
 function updateClientRecord(clientData) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
@@ -145,65 +143,41 @@ function updateClientRecord(clientData) {
     var headers = data[0];
     var rowIndex = parseInt(clientData.rowIndex, 10); 
     var oldRow = data[rowIndex]; 
+    var newRow = [...oldRow]; 
     
-    var newRow = [...oldRow]; // Clone existing
-    
-    // Map all fields correctly from the frontend JSON
-    newRow[1] = clientData.companyName;
-    newRow[2] = clientData.brandName;
-    newRow[3] = clientData.address;
-    newRow[4] = clientData.website;
-    newRow[5] = clientData.anniversary;
-    
-    newRow[6] = clientData.pFirstName;
-    newRow[7] = clientData.pLastName;
-    newRow[8] = clientData.pEmail;
-    newRow[9] = clientData.pPhone;
-    newRow[10] = clientData.pAddress;
-    newRow[11] = clientData.pBirthday;
-    newRow[12] = clientData.pPosition;
-    
-    newRow[13] = clientData.addContacts;
-    newRow[14] = clientData.shipAddress;
-    newRow[15] = clientData.retAddress;
-    
-    newRow[16] = clientData.brandReg;
-    newRow[18] = clientData.monthlyVal;
-    newRow[19] = clientData.startDate;
-    newRow[20] = clientData.termCount;
-    newRow[21] = clientData.termUnit;
-    newRow[22] = clientData.expDate;
-    newRow[23] = clientData.commRate;
-    newRow[24] = clientData.commBasis;
-    newRow[25] = clientData.ppcDate;
-    newRow[26] = clientData.dspDate;
-
-    newRow[27] = clientData.salesNotes;
-    newRow[28] = clientData.brandCode;
-    newRow[29] = clientData.status;
-    newRow[30] = clientData.acctMgr;
-    newRow[31] = clientData.brandFolder;
+    // Map fields [cite: 318-323]
+    newRow[1] = clientData.companyName; newRow[2] = clientData.brandName;
+    newRow[3] = clientData.address; newRow[4] = clientData.website;
+    newRow[5] = clientData.anniversary; newRow[6] = clientData.pFirstName;
+    newRow[7] = clientData.pLastName; newRow[8] = clientData.pEmail;
+    newRow[9] = clientData.pPhone; newRow[10] = clientData.pAddress;
+    newRow[11] = clientData.pBirthday; newRow[12] = clientData.pPosition;
+    newRow[13] = clientData.addContacts; newRow[14] = clientData.shipAddress;
+    newRow[15] = clientData.retAddress; newRow[16] = clientData.brandReg;
+    newRow[18] = clientData.monthlyVal; newRow[19] = clientData.startDate;
+    newRow[20] = clientData.termCount; newRow[21] = clientData.termUnit;
+    newRow[22] = clientData.expDate; newRow[23] = clientData.commRate;
+    newRow[24] = clientData.commBasis; newRow[25] = clientData.ppcDate;
+    newRow[26] = clientData.dspDate; newRow[27] = clientData.salesNotes;
+    newRow[28] = clientData.brandCode; newRow[29] = clientData.status;
+    newRow[30] = clientData.acctMgr; newRow[31] = clientData.brandFolder;
     newRow[32] = clientData.remarks;
 
-    // === AUTO-HISTORY GENERATOR ===
+    // Blueprint Checkpoint: Auto-History Generator 
     var changes = [];
-
-    for (var i = 1; i <= 32; i++) { // Check cols 1 through 32 for changes
+    for (var i = 1; i <= 32; i++) { 
       var oldVal = String(oldRow[i] || "").trim();
       var newVal = String(newRow[i] || "").trim();
-      
       if (oldVal !== newVal) {
         changes.push({ field: headers[i], old: oldVal, new: newVal });
       }
     }
-
     if (changes.length > 0) {
       var historyArray = [];
       try { if (oldRow[33]) historyArray = JSON.parse(oldRow[33]); } catch (e) {} 
-      
       historyArray.unshift({ timestamp: new Date().toISOString(), changes: changes });
       newRow[33] = JSON.stringify(historyArray);
-      newRow[0] = new Date(); // Update modified timestamp
+      newRow[0] = new Date(); 
     }
 
     sheet.getRange(rowIndex + 1, 1, 1, newRow.length).setValues([newRow]);

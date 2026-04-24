@@ -1,25 +1,32 @@
+/**
+ * Retrieves the role of the currently logged-in user.
+ * Looks up the user by email in the 'Users' sheet.
+ * @return {string} The user's role (e.g., 'Admin', 'Account Manager') or 'Guest'/'Inactive'.
+ */
 function getUserRole() {
   var email = Session.getActiveUser().getEmail();
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
-  if (!sheet || !email) return 'Guest'; 
-
+  if (!sheet || !email) return 'Guest';
+  
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    // Look up user by Work Email (Now Column D / Index 3)
+    // Look up user by Work Email (Index 3)
     if (data[i][3] && data[i][3].toString().toLowerCase() === email.toLowerCase()) {
-      
-      // Check Status (Now Column P / Index 15)
+      // Check Status (Index 15)
       if (data[i][15] && data[i][15].toString() === 'Inactive') {
         return 'Inactive';
       }
-      
-      // Return Role (Column C / Index 2)
-      return data[i][2].toString(); 
+      // Return Role (Index 2)
+      return data[i][2].toString();
     }
   }
   return 'Guest'; 
 }
 
+/**
+ * Retrieves the username of the currently logged-in user for display.
+ * @return {string} The username or the email address as a fallback.
+ */
 function getLoggedInUsername() {
   var email = Session.getActiveUser().getEmail();
   var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName('Users');
@@ -27,11 +34,9 @@ function getLoggedInUsername() {
 
   var data = sheet.getDataRange().getValues();
   for (var i = 1; i < data.length; i++) {
-    // Check Work Email (Now Column D / Index 3)
     if (data[i][3] && data[i][3].toString().toLowerCase() === email.toLowerCase()) {
-      // Return Username (Column B / Index 1)
       return data[i][1].toString() || email; 
     }
   }
-  return email; // Fallback just in case
+  return email;
 }
