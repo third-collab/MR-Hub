@@ -1,0 +1,48 @@
+<div id="onboardingTasksView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  <div class="view-header-bar">
+    <h2>Onboarding Task Tracker</h2>
+  </div>
+  
+  <div class="filter-wrapper">
+    <p>Select a client below to manage their onboarding checklist:</p>
+    <select id="task-client-select" class="filter-input" onchange="loadTasksForClient()">
+      <option value="">Select a client...</option>
+    </select>
+  </div>
+
+  <div class="table-container" id="task-list-container" style="display: none;">
+    <h3>Tasks for: <span id="task-client-name"></span></h3>
+    <ul id="task-list" style="list-style: none; padding: 0;">
+      </ul>
+  </div>
+</div>
+
+<script>
+  function loadOnboardingClients() {
+    // Filter the existing global data for "Onboarding" status
+    var onboardingClients = GLOBAL_CLIENT_DATA.filter(c => c.status === 'Onboarding');
+    var select = document.getElementById('task-client-select');
+    select.innerHTML = '<option value="">Select a client...</option>';
+    onboardingClients.forEach(c => {
+      select.innerHTML += `<option value="${c.rowIndex}">${c.companyName}</option>`;
+    });
+  }
+
+  function loadTasksForClient() {
+    var rowIndex = document.getElementById('task-client-select').value;
+    if(!rowIndex) { document.getElementById('task-list-container').style.display = 'none'; return; }
+    
+    document.getElementById('task-list-container').style.display = 'block';
+    document.getElementById('task-client-name').innerHTML = "...";
+    
+    // In a real app, you'd fetch specific tasks from the server. 
+    // Here we show a default template for now.
+    document.getElementById('task-list').innerHTML = `
+      <li><label><input type="checkbox"> Kickoff Call Scheduled</label></li>
+      <li><label><input type="checkbox"> Credentials Received</label></li>
+      <li><label><input type="checkbox"> Brand Assets Uploaded</label></li>
+      <li><label><input type="checkbox"> First Campaign Launch</label></li>
+    `;
+  }
+</script>

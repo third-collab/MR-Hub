@@ -1,0 +1,151 @@
+<div id="notificationsListView" class="view-section" style="display: none;">
+  
+  <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
+    
+    <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+    
+    <div class="view-header-bar" style="margin-bottom: 15px;">
+      <h2>Notifications History</h2>
+      <button class="btn-primary" onclick="loadFullNotifications()">&#8635; Refresh Notifications</button>
+    </div>
+
+    <div class="filter-wrapper">
+      <input type="text" id="notif-filter-search" class="filter-input" placeholder="Search messages..." onkeyup="applyNotifFilters()">
+      <button class="btn-filter-toggle" onclick="toggleFilter('notif-adv')">Filters</button>
+      
+      <div id="notif-adv" class="filter-advanced">
+        
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" onclick="toggleDropdown('notif-status-drop')">Status ▼</button>
+          <div class="dropdown-content" id="notif-status-drop">
+            <label><input type="radio" name="notif-filter-status" value="All" checked onchange="applyNotifFilters()"> All</label>
+            <label><input type="radio" name="notif-filter-status" value="Unread" onchange="applyNotifFilters()"> Unread</label>
+            <label><input type="radio" name="notif-filter-status" value="Read" onchange="applyNotifFilters()"> Read</label>
+          </div>
+        </div>
+
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" onclick="toggleDropdown('notif-module-drop')">Module ▼</button>
+          <div class="dropdown-content" id="notif-module-drop">
+            <label><input type="checkbox" class="notif-filter-mod-cb" value="Clients" checked onchange="applyNotifFilters()"> Clients</label>
+            <label><input type="checkbox" class="notif-filter-mod-cb" value="Users" checked onchange="applyNotifFilters()"> Users</label>
+            <label><input type="checkbox" class="notif-filter-mod-cb" value="System" checked onchange="applyNotifFilters()"> System</label>
+          </div>
+        </div>
+
+        <div class="custom-dropdown">
+          <button class="dropdown-btn" onclick="toggleDropdown('notif-category-drop')">Category ▼</button>
+          <div class="dropdown-content" id="notif-category-drop">
+            <label><input type="checkbox" class="notif-filter-cat-cb" value="New Client" checked onchange="applyNotifFilters()"> New Client</label>
+            <label><input type="checkbox" class="notif-filter-cat-cb" value="New User" checked onchange="applyNotifFilters()"> New User</label>
+            <label><input type="checkbox" class="notif-filter-cat-cb" value="User Birthday" checked onchange="applyNotifFilters()"> User Birthday</label>
+            <label><input type="checkbox" class="notif-filter-cat-cb" value="User Anniversary" checked onchange="applyNotifFilters()"> User Anniversary</label>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+        <thead>
+          <tr style="background-color: var(--brand-grey); color: white;">
+            <th style="padding: 10px; border-radius: 4px 0 0 4px; width: 50px;">Status</th>
+            <th style="padding: 10px; width: 150px;">Date & Time</th>
+            <th style="padding: 10px; width: 120px;">Module</th>
+            <th style="padding: 10px; width: 150px;">Category</th>
+            <th style="padding: 10px; border-radius: 0 4px 4px 0;">Message</th>
+          </tr>
+        </thead>
+        <tbody id="fullNotificationsTableBody">
+          <tr><td colspan="5" style="text-align:center; padding: 20px;">Loading notifications...</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div> </div>
+
+<script>
+  var GLOBAL_NOTIFS = [];
+
+  function loadFullNotifications() {
+    var tbody = document.getElementById('fullNotificationsTableBody');
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading...</td></tr>';
+    
+    google.script.run.withSuccessHandler(function(notifs) {
+      GLOBAL_NOTIFS = notifs; 
+      applyNotifFilters(); 
+    }).getMyNotifications(150, false); 
+  }
+
+  function applyNotifFilters() {
+    var search = document.getElementById('notif-filter-search').value.toLowerCase();
+    var checkedMods = Array.from(document.querySelectorAll('.notif-filter-mod-cb:checked')).map(cb => cb.value);
+    var checkedCats = Array.from(document.querySelectorAll('.notif-filter-cat-cb:checked')).map(cb => cb.value);
+
+    var filtered = GLOBAL_NOTIFS.filter(function(n) {
+      var matchSearch = (n.message || "").toLowerCase().includes(search);
+      var matchMod = checkedMods.includes((n.module || "").trim());
+      var matchCat = checkedCats.includes((n.category || "").trim());
+      
+      return matchSearch && matchMod && matchCat;
+    });
+
+    var tbody = document.getElementById('fullNotificationsTableBody');
+    tbody.innerHTML = '';
+    
+    if (filtered.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No notifications found matching those filters.</td></tr>';
+      return;
+    }
+    
+    filtered.forEach(function(n) {
+      var rowClass = n.isRead ? "" : "full-notif-unread";
+      var dotColor = n.isRead ? "#ccc" : "var(--brand-red)";
+      
+      tbody.innerHTML += `
+        <tr class="${rowClass}" data-row="${n.row}" style="border-bottom: 1px solid #eee;">
+          <td style="padding: 15px; text-align: center;">
+            <div class="status-dot" style="width: 10px; height: 10px; border-radius: 50%; background-color: ${dotColor}; margin: 0 auto;"></div>
+          </td>
+          <td style="padding: 15px; font-size: 13px; color: #777; white-space: nowrap;">${n.time}</td>
+          <td style="padding: 15px; font-size: 13px; font-weight: bold; color: var(--brand-grey);">${n.module}</td>
+          <td style="padding: 15px; font-size: 13px; color: #555;">
+            <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px;">${n.category}</span>
+          </td>
+          <td style="padding: 15px; font-size: 14px;">${n.message}</td>
+        </tr>
+      `;
+    });
+    
+    setupFullNotificationObserver();
+  }
+
+  function setupFullNotificationObserver() {
+    var unreadItems = document.querySelectorAll('.full-notif-unread');
+    if (unreadItems.length === 0) return;
+
+    var observer = new IntersectionObserver(function(entries, obs) {
+      entries.forEach(function(entry) {
+        if (entry.isIntersecting) {
+          var row = entry.target;
+          var rowIndex = row.getAttribute('data-row');
+          
+          google.script.run.markNotificationAsRead(rowIndex);
+          
+          row.classList.remove('full-notif-unread');
+          row.querySelector('.status-dot').style.backgroundColor = '#ccc';
+          obs.unobserve(row);
+          
+          var badge = document.getElementById('notif-badge');
+          if (badge) {
+            var count = parseInt(badge.innerText) - 1;
+            badge.innerText = count;
+            if (count <= 0) badge.style.display = 'none';
+          }
+        }
+      });
+    }, { threshold: 0.5 });
+
+    unreadItems.forEach(function(item) { observer.observe(item); });
+  }
+</script>

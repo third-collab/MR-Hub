@@ -1,0 +1,976 @@
+<div id="clientListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  
+  <div class="view-header-bar" style="margin-bottom: 15px;">
+    <h2>Clients Database</h2>
+    <button class="btn-primary" onclick="switchView('addClientView')">+ Add Client</button>
+  </div>
+
+  <div class="filter-wrapper">
+    <input type="text" id="client-filter-search" class="filter-input" placeholder="Search by Company, Brand, or Contact..." onkeyup="applyClientFilters()">
+    <button class="btn-filter-toggle" onclick="toggleFilter('client-adv')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+      Filters
+    </button>
+    
+    <div id="client-adv" class="filter-advanced" style="display: flex; gap: 10px;">
+      
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('client-status-drop')">Status ▼</button>
+        <div class="dropdown-content" id="client-status-drop">
+          <label><input type="checkbox" class="client-filter-status-cb" value="Onboarding" checked onchange="applyClientFilters()"> Onboarding</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Active" checked onchange="applyClientFilters()"> Active</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Paused" onchange="applyClientFilters()"> Paused</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Inactive" onchange="applyClientFilters()"> Inactive</label>
+        </div>
+      </div>
+
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('client-service-drop')">Services ▼</button>
+        <div class="dropdown-content" id="client-service-drop">
+          <label><input type="checkbox" class="client-filter-service-cb" value="Brand Management" checked onchange="applyClientFilters()"> Brand Management</label>
+          <label><input type="checkbox" class="client-filter-service-cb" value="Listing Optimization" checked onchange="applyClientFilters()"> Listing Optimization</label>
+          <label><input type="checkbox" class="client-filter-service-cb" value="Branded Listing Optimization" checked onchange="applyClientFilters()"> Branded Listing Optimization</label>
+        </div>
+      </div>
+      
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="handleClientSort('companyName')">Company Name <span id="csort-companyName" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('brandName')">Brand Name <span id="csort-brandName" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('primaryContact')">Primary Contact <span id="csort-primaryContact" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('status')">Status <span id="csort-status" class="sort-icon"></span></th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="clientTableBody">
+        <tr>
+          <td colspan="5" style="text-align:center; padding: 30px;">Loading clients...</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="addClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  <div class="form-wrapper">
+    <h2 style="margin-top: 0; color: var(--brand-grey);">Add New Client</h2>
+    
+    <form id="addClientForm" onsubmit="handleAddClientSubmit(event)" novalidate>
+      
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Client Information</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Company Name *</label><input type="text" id="add-company" class="form-control" required></div>
+          <div class="form-group"><label>Brand Name *</label><input type="text" id="add-brand" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Company Address</label>
+            <input type="text" id="add-address" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Website</label><input type="url" id="add-website" class="form-control" placeholder="https://www.example.com"></div>
+        </div>
+      </div>
+      
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Primary Contact</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name *</label><input type="text" id="add-priFirst" class="form-control" required></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" id="add-priLast" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email *</label><input type="email" id="add-priEmail" class="form-control" required></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="add-priPhone" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Position *</label><input type="text" id="add-priPosition" class="form-control" required></div>
+          <div class="form-group"><label>Birthday</label><input type="date" id="add-priBirthday" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Direct Address</label>
+            <input type="text" id="add-priAddress" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Additional Contacts</button>
+      <div class="panel">
+        <div style="text-align: right; margin: 15px 0 10px 0;">
+          <button type="button" class="btn-add-row" onclick="addContactRow('add-contacts-container')">+ Add Contact</button>
+        </div>
+        <div id="add-contacts-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Contract Info & Services</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Monthly Value ($) *</label><input type="number" id="add-value" class="form-control" required></div>
+          <div class="form-group"><label>Start Date *</label><input type="date" id="add-date" class="form-control" required></div>
+        </div>
+        <div class="form-group">
+          <label>Services Included *</label>
+          <div class="checkbox-group" style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Brand Management"> Brand Management</label>
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Listing Optimization"> Listing Optimization</label>
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Branded Listing Optimization"> Branded Listing Optimization</label>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Client Notes</button>
+      <div class="panel">
+        <div class="form-group" style="width: 100%; margin-top: 15px; margin-bottom: 20px;">
+          <label>Sales / Internal Notes</label>
+          <div id="add-editor" style="height: 200px; background-color: var(--brand-white); border-radius: var(--border-radius-small); border: 1px solid #ccc;"></div>
+        </div>
+      </div>
+
+      <div class="action-buttons" style="justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="add-submit">Submit & Add Client</button>
+      </div>
+
+    </form>
+    <div id="add-status" class="status-msg"></div>
+  </div>
+</div>
+
+
+<div id="editClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  <div class="form-wrapper">
+    <h2 style="margin-top: 0; color: var(--brand-grey);">Edit Client Details</h2>
+    <form id="editClientForm" onsubmit="handleEditClientSubmit(event)" novalidate>
+      <input type="hidden" id="edt-rowIndex">
+      
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Client Information</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Company Name</label><input type="text" id="edt-company" class="form-control"></div>
+          <div class="form-group"><label>Brand Name</label><input type="text" id="edt-brand" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Company Address</label>
+            <input type="text" id="edt-address" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Website</label><input type="url" id="edt-website" class="form-control"></div>
+          <div class="form-group"><label>Anniversary Date</label><input type="date" id="edt-anniversary" class="form-control"></div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Primary Contact</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name</label><input type="text" id="edt-priFirst" class="form-control"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" id="edt-priLast" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email</label><input type="email" id="edt-priEmail" class="form-control"></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="edt-priPhone" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Position</label><input type="text" id="edt-priPosition" class="form-control"></div>
+          <div class="form-group"><label>Birthday</label><input type="date" id="edt-priBirthday" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Direct Address</label>
+            <input type="text" id="edt-priAddress" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Additional Contacts</button>
+      <div class="panel">
+        <div style="text-align: right; margin: 15px 0 10px 0;">
+          <button type="button" class="btn-add-row" onclick="addContactRow('edt-contacts-container')">+ Add Contact</button>
+        </div>
+        <div id="edt-contacts-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Terms & Logistics</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Monthly Value ($)</label><input type="number" id="edt-value" class="form-control"></div>
+          <div class="form-group"><label>Start Date</label><input type="date" id="edt-date" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Term Count</label><input type="number" id="edt-termCount" class="form-control"></div>
+          <div class="form-group">
+            <label>Term Unit</label>
+            <select id="edt-termUnit" class="form-control">
+              <option value="Months">Months</option>
+              <option value="Years">Years</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Expiration Date</label><input type="date" id="edt-expDate" class="form-control"></div>
+          <div class="form-group">
+            <label>Brand Registered</label>
+            <select id="edt-brandReg" class="form-control">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Commission Rate (%)</label><input type="text" id="edt-commRate" class="form-control"></div>
+          <div class="form-group"><label>Commission Basis</label><input type="text" id="edt-commBasis" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>PPC Launch Date</label><input type="date" id="edt-ppcDate" class="form-control"></div>
+          <div class="form-group"><label>DSP Launch Date</label><input type="date" id="edt-dspDate" class="form-control"></div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Addresses (Shipping & Return)</button>
+      <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 10px 0;">
+          <strong style="color: var(--brand-grey);">Shipping Addresses</strong>
+          <button type="button" class="btn-add-row" onclick="addAddressRow('edt-shipping-container')">+ Add Address</button>
+        </div>
+        <div id="edt-shipping-container" style="margin-bottom: 20px;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-top: 1px solid #E3E3E3; padding-top: 15px;">
+          <strong style="color: var(--brand-grey);">Return Addresses</strong>
+          <button type="button" class="btn-add-row" onclick="addAddressRow('edt-return-container')">+ Add Address</button>
+        </div>
+        <div id="edt-return-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Notes & Admin</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Status</label>
+            <select id="edt-status" class="form-control">
+              <option value="Onboarding">Onboarding</option>
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Brand Code</label><input type="text" id="edt-brandCode" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Account Manager</label>
+            <select id="edt-acctMgr" class="form-control">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Brand Folder (URL)</label><input type="url" id="edt-folder" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Remarks</label>
+            <textarea id="edt-remarks" class="form-control" style="width: 100%; height: 80px; resize: vertical; box-sizing: border-box; border: 1px solid #ccc; border-radius: var(--border-radius-small); font-family: inherit; padding: 14px; background-color: var(--brand-white);"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Client Notes</button>
+      <div class="panel">
+        <div class="form-group" style="width: 100%; margin-top: 15px; margin-bottom: 20px;">
+          <label>Sales / Internal Notes</label>
+          <div id="edt-editor" style="height: 200px; background-color: var(--brand-white); border-radius: var(--border-radius-small); border: 1px solid #ccc;"></div>
+        </div>
+      </div>
+
+      <div class="action-buttons" style="justify-content: flex-end; margin-top: 20px;">
+        <button type="button" class="btn-primary" onclick="handleEditClientSubmit()" id="edt-submit">Save Changes</button>
+      </div>
+    </form>
+    <div id="ed-statusMsg" class="status-msg"></div>
+  </div>
+</div>
+
+
+<div id="readOnlyClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  
+  <div class="tab-nav">
+    <button type="button" class="tab-btn active" id="btn-ro-overview" onclick="navigateClientTab('ro', 'overview')">Overview</button>
+    <button type="button" class="tab-btn" id="btn-ro-contacts" onclick="navigateClientTab('ro', 'contacts')">Contacts & Addresses</button>
+    <button type="button" class="tab-btn" id="btn-ro-history" onclick="navigateClientTab('ro', 'history')">Update History</button>
+  </div>
+
+  <div id="ro-overview" class="tab-content" style="display: block;">
+    </div>
+  
+  <div id="ro-contacts" class="tab-content" style="display: none;">
+     </div>
+
+  <div id="ro-history" class="tab-content" style="display: none;">
+    <h3 style="margin-top:0;">Audit Trail</h3>
+    <div id="ro-history-container" style="background: #f9f9f9; padding: 15px; border-radius: 4px;">
+      </div>
+  </div>
+</div>
+
+
+<script>
+  /* ========================================================================
+     1. UI, NAVIGATION & ACCORDIONS
+     ======================================================================== */
+  function toggleAccordion(element) {
+    element.classList.toggle("active");
+    var panel = element.nextElementSibling;
+    
+    if (panel.style.display === "block") {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "block";
+      // Force Quill to initialize safely the moment an accordion opens
+      initClientEditors();
+    }
+  }
+
+  function toggleFilter(filterId) {
+    var el = document.getElementById(filterId);
+    if (el) el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
+  }
+
+  function toggleDropdown(dropId) {
+    var el = document.getElementById(dropId);
+    if (el) el.style.display = (el.style.display === 'block') ? 'none' : 'block';
+  }
+
+  document.addEventListener('click', function(event) {
+    var clientAdv = document.getElementById('client-adv');
+    var statusDrop = document.getElementById('client-status-drop');
+    var serviceDrop = document.getElementById('client-service-drop');
+    if (clientAdv && !clientAdv.contains(event.target)) {
+      if (statusDrop) statusDrop.style.display = 'none';
+      if (serviceDrop) serviceDrop.style.display = 'none';
+    }
+  });
+
+  /* ========================================================================
+     2. RICH TEXT EDITOR & DATE FORMATTER
+     ======================================================================== */
+  var addClientQuill, editClientQuill;
+  
+  function initClientEditors() {
+    if (typeof Quill !== 'undefined') {
+      try {
+        var addEd = document.getElementById('add-editor');
+        if (!addClientQuill && addEd && addEd.offsetHeight > 0) {
+          addClientQuill = new Quill('#add-editor', { theme: 'snow' });
+        }
+        var edtEd = document.getElementById('edt-editor');
+        if (!editClientQuill && edtEd && edtEd.offsetHeight > 0) {
+          editClientQuill = new Quill('#edt-editor', { theme: 'snow' });
+        }
+      } catch(e) { console.error("Quill error:", e); }
+    }
+  }
+
+  function safelyFormatDate(dateStr) {
+    if (!dateStr) return "";
+    try {
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "";
+      return d.toISOString().split('T')[0];
+    } catch(e) { 
+      return ""; 
+    }
+  }
+
+  /* ========================================================================
+     3. DYNAMIC JSON ROWS (Contacts & Addresses)
+     ======================================================================== */
+  function addContactRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row';
+    row.style = 'border: 1px solid #ddd; background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 4px;';
+    row.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <input type="text" class="c-fname form-control" placeholder="First Name" value="${data.firstName || ''}">
+        <input type="text" class="c-lname form-control" placeholder="Last Name" value="${data.lastName || ''}">
+        <input type="email" class="c-email form-control" placeholder="Email" value="${data.email || ''}">
+        <input type="text" class="c-phone form-control" placeholder="Phone" value="${data.phone || ''}">
+        <input type="text" class="c-pos form-control" placeholder="Position" value="${data.position || ''}">
+        <input type="date" class="c-bday form-control" placeholder="Birthday" value="${data.birthday || ''}">
+      </div>
+      <div style="margin-top: 10px;">
+        <input type="text" class="c-address form-control" placeholder="Full Address" value="${data.address || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.parentElement.parentElement.remove()">Remove Contact</button>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  function addAddressRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row';
+    row.style = 'border: 1px solid #ddd; background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 4px;';
+    row.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-contact form-control" placeholder="Contact Name" value="${data.contactName || ''}">
+        <input type="text" class="a-phone form-control" placeholder="Phone Number" value="${data.phone || ''}">
+        <input type="email" class="a-email form-control" placeholder="Email" value="${data.email || ''}">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input type="text" class="a-street form-control" placeholder="Street Address" value="${data.street || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-city form-control" placeholder="City" value="${data.city || ''}">
+        <input type="text" class="a-state form-control" placeholder="State/Prov" value="${data.state || ''}">
+        <input type="text" class="a-country form-control" placeholder="Country Code" value="${data.countryCode || ''}">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input type="text" class="a-remarks form-control" placeholder="Remarks" value="${data.remarks || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.parentElement.parentElement.remove()">Remove Address</button>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  function getContactsJSON(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return "[]";
+    var rows = container.querySelectorAll('.dynamic-json-row');
+    var contacts = [];
+    rows.forEach(function(row) {
+      contacts.push({
+        firstName: row.querySelector('.c-fname').value,
+        lastName: row.querySelector('.c-lname').value,
+        email: row.querySelector('.c-email').value,
+        phone: row.querySelector('.c-phone').value,
+        position: row.querySelector('.c-pos').value,
+        birthday: row.querySelector('.c-bday').value,
+        address: row.querySelector('.c-address').value
+      });
+    });
+    return JSON.stringify(contacts);
+  }
+
+  function getAddressesJSON(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return "[]";
+    var rows = container.querySelectorAll('.dynamic-json-row');
+    var addresses = [];
+    rows.forEach(function(row) {
+      addresses.push({
+        contactName: row.querySelector('.a-contact').value,
+        phone: row.querySelector('.a-phone').value,
+        email: row.querySelector('.a-email').value,
+        street: row.querySelector('.a-street').value,
+        city: row.querySelector('.a-city').value,
+        state: row.querySelector('.a-state').value,
+        countryCode: row.querySelector('.a-country').value,
+        remarks: row.querySelector('.a-remarks').value
+      });
+    });
+    return JSON.stringify(addresses);
+  }
+
+  /* ========================================================================
+     4. ACCOUNT MANAGER DATA FETCHER
+     ======================================================================== */
+  function populateAccountManagersDropdown(selectId, selectedValue) {
+    var selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+    selectEl.innerHTML = '<option value="">Loading AMs...</option>';
+    
+    google.script.run
+      .withSuccessHandler(function(users) {
+        if (!users || !Array.isArray(users) || users.length === 0) {
+          selectEl.innerHTML = '<option value="">Error: No users in database</option>';
+          return;
+        }
+        
+        selectEl.innerHTML = '<option value="">Select Account Manager</option>';
+        
+        // Loosened filter to catch "Account", "Acct", or "AM"
+        var managers = users.filter(function(u) {
+          var pos = (u.position || "").toLowerCase();
+          var role = (u.role || "").toLowerCase();
+          var isAM = role.includes('account') || pos.includes('account') || role.includes('acct');
+          return u.status === 'Active' && isAM;
+        });
+
+        // FALLBACK: If filter removes everyone, load all active users so it isn't broken
+        if (managers.length === 0) {
+          managers = users.filter(function(u) { return u.status === 'Active'; });
+        }
+        
+        managers.forEach(function(u) {
+          var fullName = ((u.firstName || "") + " " + (u.lastName || "")).trim();
+          var optName = fullName || u.username;
+          var opt = document.createElement('option');
+          opt.value = optName;
+          opt.text = optName;
+          selectEl.appendChild(opt);
+        });
+        
+        if (selectedValue) selectEl.value = selectedValue;
+      })
+      .withFailureHandler(function(err) {
+        selectEl.innerHTML = '<option value="">Network Error: ' + err.message + '</option>';
+      })
+      .getUsersList();
+  }
+
+  /* ========================================================================
+     5. TABLE RENDERING, FILTERING & SORTING
+     ======================================================================== */
+  var GLOBAL_CLIENT_DATA = [];
+  var CURRENT_CLIENT_SORT_COLUMN = 'companyName'; 
+  var CURRENT_CLIENT_SORT_DESC = false; 
+
+  function populateTable(clients) {
+    GLOBAL_CLIENT_DATA = clients || [];
+    applyClientFilters();
+  }
+
+  function handleClientSort(column) {
+    if (CURRENT_CLIENT_SORT_COLUMN === column) {
+      CURRENT_CLIENT_SORT_DESC = !CURRENT_CLIENT_SORT_DESC; 
+    } else {
+      CURRENT_CLIENT_SORT_COLUMN = column;
+      CURRENT_CLIENT_SORT_DESC = false; 
+    }
+    applyClientFilters();
+  }
+
+  function applyClientFilters() {
+    var searchInput = document.getElementById('client-filter-search');
+    var searchText = searchInput ? searchInput.value.toLowerCase() : "";
+    
+    var checkedStatuses = Array.from(document.querySelectorAll('.client-filter-status-cb:checked')).map(function(cb) { return cb.value; });
+    var checkedServices = Array.from(document.querySelectorAll('.client-filter-service-cb:checked')).map(function(cb) { return cb.value; });
+
+    var filteredData = GLOBAL_CLIENT_DATA.filter(function(client) {
+      var pContact = ((client.pFirstName || "") + " " + (client.pLastName || "")).toLowerCase();
+      var matchesSearch = ((client.companyName || "").toLowerCase().includes(searchText) || 
+                           (client.brandName || "").toLowerCase().includes(searchText) || 
+                           pContact.includes(searchText));
+      
+      var matchesStatus = checkedStatuses.length === 0 || checkedStatuses.includes(client.status);
+      var cServices = client.services || "";
+      var matchesService = checkedServices.length === 0 || checkedServices.some(function(s) { 
+        return cServices.includes(s); 
+      });
+
+      return matchesSearch && matchesStatus && matchesService;
+    });
+
+    filteredData.sort(function(a, b) {
+      var valA = a[CURRENT_CLIENT_SORT_COLUMN] || '';
+      var valB = b[CURRENT_CLIENT_SORT_COLUMN] || '';
+      
+      if (CURRENT_CLIENT_SORT_COLUMN === 'primaryContact') {
+        valA = (a.pFirstName || "") + " " + (a.pLastName || "");
+        valB = (b.pFirstName || "") + " " + (b.pLastName || "");
+      }
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+
+      if (valA < valB) return CURRENT_CLIENT_SORT_DESC ? 1 : -1;
+      if (valA > valB) return CURRENT_CLIENT_SORT_DESC ? -1 : 1;
+      return 0;
+    });
+
+    document.querySelectorAll('.sort-icon').forEach(function(icon) { if(icon.id.startsWith('csort-')) icon.innerHTML = ''; });
+    var iconEl = document.getElementById('csort-' + CURRENT_CLIENT_SORT_COLUMN);
+    if (iconEl) iconEl.innerHTML = CURRENT_CLIENT_SORT_DESC ? '▼' : '▲'; 
+
+    renderClientTableRows(filteredData);
+  }
+
+  function renderClientTableRows(clients) {
+    var tbody = document.getElementById('clientTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = ''; 
+    
+    if (clients.length === 0) { 
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">No clients found.</td></tr>'; 
+      return; 
+    }
+    
+    clients.forEach(function(client) {
+      var tr = document.createElement('tr');
+      tr.style.cursor = "pointer"; 
+      
+      tr.onclick = function(e) { 
+        if (!e.target.closest('.btn-edit')) {
+          if (typeof viewClient === "function") viewClient(client.rowIndex);
+        }
+      };
+
+      var pContact = (client.pFirstName || "") + " " + (client.pLastName || "");
+      var statusColor = client.status === 'Active' ? 'var(--brand-yellow)' : '#ccc';
+      
+      tr.innerHTML = `
+        <td><strong>${client.companyName || "-"}</strong></td>
+        <td>${client.brandName || "-"}</td>
+        <td>${pContact.trim() || "-"}</td>
+        <td><span class="badge" style="background-color: ${statusColor}; color: var(--brand-grey);">${client.status || "-"}</span></td>
+        <td><button class="btn-edit" onclick="openEditClientForm(${client.rowIndex})">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ========================================================================
+     6. ADD CLIENT FORM SUBMISSION
+     ======================================================================== */
+  function handleAddClientSubmit(e) {
+    if(e) e.preventDefault();
+    var company = document.getElementById('add-company').value;
+    var brand = document.getElementById('add-brand').value;
+    if (!company || !brand) {
+      alert("Company Name and Brand Name are required.");
+      return;
+    }
+
+    var statusEl = document.getElementById('add-status');
+    if(statusEl) {
+      statusEl.innerHTML = "Creating client record...";
+      statusEl.style.color = "var(--brand-grey)";
+    }
+    var submitBtn = document.getElementById('add-submit');
+    if(submitBtn) submitBtn.disabled = true;
+
+    var services = [];
+    document.querySelectorAll('input[name="add-services"]:checked').forEach(function(cb) {
+      services.push(cb.value);
+    });
+
+    var clientData = {
+      isEditMode: false,
+      companyName: company,
+      brandName: brand,
+      address: document.getElementById('add-address').value,
+      website: document.getElementById('add-website').value,
+      pFirstName: document.getElementById('add-priFirst').value,
+      pLastName: document.getElementById('add-priLast').value,
+      pEmail: document.getElementById('add-priEmail').value,
+      pPhone: document.getElementById('add-priPhone').value,
+      pPosition: document.getElementById('add-priPosition').value,
+      pBirthday: document.getElementById('add-priBirthday').value,
+      pAddress: document.getElementById('add-priAddress').value,
+      addContacts: getContactsJSON('add-contacts-container'),
+      monthlyVal: document.getElementById('add-value').value,
+      startDate: document.getElementById('add-date').value,
+      services: services.join(', '),
+      salesNotes: (addClientQuill) ? addClientQuill.root.innerHTML : "", 
+      status: "Onboarding"
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if(statusEl) {
+          statusEl.innerHTML = res;
+          statusEl.style.color = res.includes("Error") ? "var(--brand-red)" : "green";
+        }
+        if(submitBtn) submitBtn.disabled = false;
+        if (!res.includes("Error")) {
+          document.getElementById('addClientForm').reset();
+          if(addClientQuill) addClientQuill.setContents([]);
+          document.getElementById('add-contacts-container').innerHTML = '';
+          setTimeout(function() { switchView('clientListView'); }, 1500);
+        }
+      })
+      .withFailureHandler(function(err) {
+        if(statusEl) {
+          statusEl.innerHTML = "Database Error: " + err.message;
+          statusEl.style.color = "var(--brand-red)";
+        }
+        if(submitBtn) submitBtn.disabled = false;
+      })
+      .saveClient(clientData);
+  }
+
+  /* ========================================================================
+     7. EDIT CLIENT FORM LOADING & SUBMISSION
+     ======================================================================== */
+  function openEditClientForm(rowIndex) {
+    switchView('editClientView');
+    
+    initClientEditors();
+    
+    document.getElementById('edt-contacts-container').innerHTML = '';
+    document.getElementById('edt-shipping-container').innerHTML = '';
+    document.getElementById('edt-return-container').innerHTML = '';
+
+    var statusMsg = document.getElementById('ed-statusMsg');
+    if(statusMsg) {
+        statusMsg.innerHTML = "Loading client data...";
+        statusMsg.style.color = "var(--brand-grey)";
+    }
+
+    google.script.run
+      .withSuccessHandler(function(data) {
+        // Catch the newly created backend errors
+        if (!data) {
+          if(statusMsg) { statusMsg.innerHTML = "Error: Database returned no data object."; statusMsg.style.color = "var(--brand-red)"; }
+          return;
+        }
+        if (data.error) {
+          if(statusMsg) { statusMsg.innerHTML = "Database Error: " + data.error; statusMsg.style.color = "var(--brand-red)"; }
+          return;
+        }
+        
+        try {
+          if(statusMsg) statusMsg.innerHTML = "";
+          document.getElementById('edt-rowIndex').value = data.rowIndex;
+          
+          document.getElementById('edt-company').value = data.companyName || "";
+          document.getElementById('edt-brand').value = data.brandName || "";
+          document.getElementById('edt-address').value = data.address || ""; 
+          document.getElementById('edt-website').value = data.website || "";
+          document.getElementById('edt-anniversary').value = safelyFormatDate(data.anniversary);
+          
+          document.getElementById('edt-priFirst').value = data.pFirstName || "";
+          document.getElementById('edt-priLast').value = data.pLastName || "";
+          document.getElementById('edt-priEmail').value = data.pEmail || "";
+          document.getElementById('edt-priPhone').value = data.pPhone || "";
+          document.getElementById('edt-priPosition').value = data.pPosition || "";
+          document.getElementById('edt-priBirthday').value = safelyFormatDate(data.pBirthday);
+          document.getElementById('edt-priAddress').value = data.pAddress || ""; 
+          
+          if (data.addContacts) {
+            try { JSON.parse(data.addContacts).forEach(function(c) { addContactRow('edt-contacts-container', c); }); } catch(e) {}
+          }
+
+          document.getElementById('edt-value').value = data.monthlyVal || "";
+          document.getElementById('edt-date').value = safelyFormatDate(data.startDate);
+          document.getElementById('edt-termCount').value = data.termCount || "";
+          document.getElementById('edt-termUnit').value = data.termUnit || "Months";
+          document.getElementById('edt-expDate').value = safelyFormatDate(data.expDate);
+          document.getElementById('edt-brandReg').value = data.brandReg || "No";
+          document.getElementById('edt-commRate').value = data.commRate || "";
+          document.getElementById('edt-commBasis').value = data.commBasis || "";
+          document.getElementById('edt-ppcDate').value = safelyFormatDate(data.ppcDate);
+          document.getElementById('edt-dspDate').value = safelyFormatDate(data.dspDate);
+
+          if (data.shipAddress) {
+            try { JSON.parse(data.shipAddress).forEach(function(s) { addAddressRow('edt-shipping-container', s); }); } catch(e) {}
+          }
+          if (data.retAddress) {
+            try { JSON.parse(data.retAddress).forEach(function(r) { addAddressRow('edt-return-container', r); }); } catch(e) {}
+          }
+
+          document.getElementById('edt-status').value = data.status || "Active";
+          document.getElementById('edt-brandCode').value = data.brandCode || "";
+          populateAccountManagersDropdown('edt-acctMgr', data.acctMgr);
+          document.getElementById('edt-folder').value = data.brandFolder || "";
+          
+          var remarksEl = document.getElementById('edt-remarks');
+          if (remarksEl) remarksEl.value = data.remarks || "";
+          
+          setTimeout(function() {
+             if (editClientQuill) {
+                editClientQuill.clipboard.dangerouslyPasteHTML(data.salesNotes || "");
+             } else {
+                var editorEl = document.getElementById('edt-editor');
+                if (editorEl) editorEl.innerHTML = data.salesNotes || ""; 
+             }
+          }, 300);
+
+        } catch (err) {
+          if(statusMsg) { statusMsg.innerHTML = "UI Mapping Error: " + err.message; statusMsg.style.color = "var(--brand-red)"; }
+        }
+      })
+      .withFailureHandler(function(err) {
+        if(statusMsg) { statusMsg.innerHTML = "Server Connectivity Error: " + err.message; statusMsg.style.color = "var(--brand-red)"; }
+      })
+      .getClientById(rowIndex);
+  }
+
+  function handleEditClientSubmit(e) {
+    if(e) e.preventDefault();
+    var statusMsg = document.getElementById('ed-statusMsg');
+    if(statusMsg) {
+      statusMsg.innerHTML = "Saving changes...";
+      statusMsg.style.color = "var(--brand-grey)";
+    }
+    var btn = document.getElementById('edt-submit');
+    if(btn) btn.disabled = true;
+
+    var clientData = {
+      isEditMode: true,
+      rowIndex: document.getElementById('edt-rowIndex').value,
+      companyName: document.getElementById('edt-company').value,
+      brandName: document.getElementById('edt-brand').value,
+      address: document.getElementById('edt-address').value,
+      website: document.getElementById('edt-website').value,
+      anniversary: document.getElementById('edt-anniversary').value,
+      
+      pFirstName: document.getElementById('edt-priFirst').value,
+      pLastName: document.getElementById('edt-priLast').value,
+      pEmail: document.getElementById('edt-priEmail').value,
+      pPhone: document.getElementById('edt-priPhone').value,
+      pPosition: document.getElementById('edt-priPosition').value,
+      pBirthday: document.getElementById('edt-priBirthday').value,
+      pAddress: document.getElementById('edt-priAddress').value,
+      
+      addContacts: getContactsJSON('edt-contacts-container'),
+      
+      monthlyVal: document.getElementById('edt-value').value,
+      startDate: document.getElementById('edt-date').value,
+      termCount: document.getElementById('edt-termCount').value,
+      termUnit: document.getElementById('edt-termUnit').value,
+      expDate: document.getElementById('edt-expDate').value,
+      brandReg: document.getElementById('edt-brandReg').value,
+      commRate: document.getElementById('edt-commRate').value,
+      commBasis: document.getElementById('edt-commBasis').value,
+      ppcDate: document.getElementById('edt-ppcDate').value,
+      dspDate: document.getElementById('edt-dspDate').value,
+      
+      shipAddress: getAddressesJSON('edt-shipping-container'),
+      retAddress: getAddressesJSON('edt-return-container'),
+      
+      status: document.getElementById('edt-status').value,
+      brandCode: document.getElementById('edt-brandCode').value,
+      acctMgr: document.getElementById('edt-acctMgr').value,
+      brandFolder: document.getElementById('edt-folder').value,
+      remarks: document.getElementById('edt-remarks').value,
+      salesNotes: (editClientQuill) ? editClientQuill.root.innerHTML : ""
+    };
+
+    google.script.run
+      .withSuccessHandler(function(res) {
+        if(statusMsg) {
+          statusMsg.innerHTML = "Client updated successfully!";
+          statusMsg.style.color = "green";
+        }
+        if(btn) btn.disabled = false;
+        setTimeout(function(){ switchView('clientListView'); }, 1500);
+      })
+      .withFailureHandler(function(err) {
+        if(statusMsg) {
+          statusMsg.innerHTML = "Failed to update: " + err.message;
+          statusMsg.style.color = "var(--brand-red)";
+        }
+        if(btn) btn.disabled = false;
+      })
+      .updateClient(clientData);
+  }
+
+  /* ========================================================================
+     8. VIEW ONLY CLIENT & HISTORY RENDERING
+     ======================================================================== */
+  function viewClient(rowIndex) {
+    switchView('readOnlyClientView');
+    
+    var roOverview = document.getElementById('ro-overview');
+    var roContacts = document.getElementById('ro-contacts');
+    var roHistory = document.getElementById('ro-history-container');
+    
+    if (roOverview) roOverview.innerHTML = "<p>Loading client data...</p>";
+    if (roContacts) roContacts.innerHTML = "";
+    if (roHistory) roHistory.innerHTML = "";
+
+    google.script.run.withSuccessHandler(function(data) {
+      if (!data) return;
+
+      if (roOverview) {
+        roOverview.innerHTML = `
+          <div style="display:flex; justify-content:space-between; margin-bottom: 20px;">
+             <h2 style="margin:0;">${data.companyName} <span style="font-size: 14px; font-weight:normal; color:#888;">(${data.brandName})</span></h2>
+             <button class="btn-edit" onclick="openEditClientForm(${data.rowIndex})">Edit Client</button>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+             <div>
+                <p><strong>Status:</strong> ${data.status}</p>
+                <p><strong>Website:</strong> <a href="${data.website}" target="_blank">${data.website || 'N/A'}</a></p>
+                <p><strong>Account Manager:</strong> ${data.acctMgr || 'N/A'}</p>
+                <p><strong>Brand Code:</strong> ${data.brandCode || 'N/A'}</p>
+             </div>
+             <div>
+                <p><strong>Monthly Value:</strong> $${data.monthlyVal || '0'}</p>
+                <p><strong>Contract Start:</strong> ${safelyFormatDate(data.startDate) || 'N/A'}</p>
+                <p><strong>Terms:</strong> ${data.termCount || ''} ${data.termUnit || ''}</p>
+             </div>
+          </div>
+        `;
+      }
+
+      var contactsHtml = `
+        <h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top:30px;">Primary Contact</h3>
+        <p><strong>Name:</strong> ${data.pFirstName} ${data.pLastName}</p>
+        <p><strong>Position:</strong> ${data.pPosition || 'N/A'}</p>
+        <p><strong>Email:</strong> <a href="mailto:${data.pEmail}">${data.pEmail}</a></p>
+        <p><strong>Phone:</strong> ${data.pPhone || 'N/A'}</p>
+        <p><strong>Address:</strong> ${data.pAddress || 'N/A'}</p>
+      `;
+
+      if (data.addContacts && data.addContacts !== "[]") {
+        try {
+          var adds = JSON.parse(data.addContacts);
+          if (adds.length > 0) {
+            contactsHtml += `<h3 style="border-bottom: 1px solid #eee; padding-bottom: 5px; margin-top:20px;">Additional Contacts</h3>`;
+            adds.forEach(function(c, i) {
+              contactsHtml += `
+                <div style="background: #f9f9f9; padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+                  <p style="margin:0 0 5px 0;"><strong>${c.firstName || ''} ${c.lastName || ''}</strong> - ${c.position || 'N/A'}</p>
+                  <p style="margin:0 0 5px 0; font-size:13px;">Email: ${c.email || 'N/A'} | Phone: ${c.phone || 'N/A'}</p>
+                  ${c.address ? `<p style="margin:0; font-size:13px;">Address: ${c.address}</p>` : ''}
+                </div>`;
+            });
+          }
+        } catch(e) {}
+      }
+      
+      if (roContacts) roContacts.innerHTML = contactsHtml;
+      if (roHistory) renderHistoryTab(data.history);
+
+    }).getClientById(rowIndex);
+  }
+
+  function renderHistoryTab(historyJsonString) {
+    var container = document.getElementById('ro-history-container');
+    if (!container) return;
+    container.innerHTML = '';
+    
+    if (!historyJsonString || historyJsonString === "[]") {
+      container.innerHTML = '<p style="color: #888;">No update history available yet.</p>';
+      return;
+    }
+
+    try {
+      var historyData = JSON.parse(historyJsonString);
+      historyData.forEach(function(entry) {
+        var dateStr = new Date(entry.timestamp).toLocaleString();
+        var html = `
+          <div style="border-left: 3px solid var(--brand-red); padding-left: 15px; margin-bottom: 25px;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">${dateStr}</div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">`;
+        
+        entry.changes.forEach(function(change) {
+          html += `<li style="margin-bottom: 4px;"><strong>${change.field}:</strong> Changed from <em style="color:#888;">"${change.old || '(empty)'}"</em> to <em style="color:#111;">"${change.new}"</em></li>`;
+        });
+        
+        html += `</ul></div>`;
+        container.innerHTML += html;
+      });
+    } catch (e) {
+      container.innerHTML = '<p style="color:red;">Error loading history data.</p>';
+    }
+  }
+</script>
