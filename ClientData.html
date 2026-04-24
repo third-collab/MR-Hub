@@ -3,7 +3,7 @@
   
   <div class="view-header-bar" style="margin-bottom: 15px;">
     <h2>Clients Database</h2>
-    <button class="btn-primary" onclick="switchView('addClientView')">+ Add Client</button>
+    <button class="btn-primary" onclick="openAddClientForm()">+ Add Client</button>
   </div>
 
   <div class="filter-wrapper">
@@ -503,26 +503,22 @@
         
         selectEl.innerHTML = '<option value="">Select Account Manager</option>';
         
-        // Loosened filter to catch "Account", "Acct", or "AM"
+        // Filter STRICTLY for Active users with "Account Manager" in their Position
         var managers = users.filter(function(u) {
-          var pos = (u.position || "").toLowerCase();
-          var role = (u.role || "").toLowerCase();
-          var isAM = role.includes('account') || pos.includes('account') || role.includes('acct');
-          return u.status === 'Active' && isAM;
+          var pos = (u.position || "").toLowerCase().trim();
+          var status = (u.status || "").trim();
+          
+          return status === 'Active' && pos.includes('account manager');
         });
-
-        // FALLBACK: If filter removes everyone, load all active users so it isn't broken
-        if (managers.length === 0) {
-          managers = users.filter(function(u) { return u.status === 'Active'; });
-        }
         
         managers.forEach(function(u) {
-          var fullName = ((u.firstName || "") + " " + (u.lastName || "")).trim();
-          var optName = fullName || u.username;
-          var opt = document.createElement('option');
-          opt.value = optName;
-          opt.text = optName;
-          selectEl.appendChild(opt);
+          // Display and set the value exclusively to the Username
+          if (u.username) {
+            var opt = document.createElement('option');
+            opt.value = u.username;
+            opt.text = u.username;
+            selectEl.appendChild(opt);
+          }
         });
         
         if (selectedValue) selectEl.value = selectedValue;
@@ -708,8 +704,42 @@
   /* ========================================================================
      7. EDIT CLIENT FORM LOADING & SUBMISSION
      ======================================================================== */
+  function resetAccordions(viewId) {
+    var view = document.getElementById(viewId);
+    if (!view) return;
+    var accordions = view.querySelectorAll('.accordion');
+    var panels = view.querySelectorAll('.panel');
+    
+    // Loop through all accordions in this view
+    for (var i = 0; i < accordions.length; i++) {
+      if (i === 0) {
+        // Force the first one open
+        accordions[i].classList.add('active');
+        panels[i].style.display = 'block';
+      } else {
+        // Force the rest closed
+        accordions[i].classList.remove('active');
+        panels[i].style.display = 'none';
+      }
+    }
+  }
+
+  function openAddClientForm() {
+    switchView('addClientView');
+    resetAccordions('addClientView'); // Reset the accordions
+    document.getElementById('addClientForm').reset(); // Clear input fields
+    document.getElementById('add-contacts-container').innerHTML = ''; // Clear dynamic contacts
+    
+    // Clear the rich text editor if it exists
+    if (addClientQuill) addClientQuill.setContents([]); 
+    
+    initClientEditors(); // Ensure rich text loads safely
+  }
+
+
   function openEditClientForm(rowIndex) {
     switchView('editClientView');
+    resetAccordions('editClientView'); // <--- THIS RESETS THE ACCORDIONS EVERY TIME
     
     initClientEditors();
     
@@ -725,7 +755,6 @@
 
     google.script.run
       .withSuccessHandler(function(data) {
-        // Catch the newly created backend errors
         if (!data) {
           if(statusMsg) { statusMsg.innerHTML = "Error: Database returned no data object."; statusMsg.style.color = "var(--brand-red)"; }
           return;
