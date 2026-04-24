@@ -1,6 +1,6 @@
 function doGet() {
   var role = getUserRole();
-  var faviconUrl = 'https://static.wixstatic.com/media/b5f2cd_5833de54beb6448ba2ce8948280d9e77%7Emv2.png/v1/fill/w_192%2Ch_192%2Clg_1%2Cusm_0.66_1.00_0.01/b5f2cd_5833de54beb6448ba2ce8948280d9e77%7Emv2.png';
+  var faviconUrl = 'https://i.imgur.com/nHCetrv.png';
   
   // NEW: Intercept Inactive users before the app even loads
   if (role === 'Inactive') {
@@ -18,7 +18,7 @@ function doGet() {
       </head>
       <body>
         <div class="error-card">
-          <img src="https://static.wixstatic.com/media/b5f2cd_5833de54beb6448ba2ce8948280d9e77%7Emv2.png/v1/fill/w_192%2Ch_192%2Clg_1%2Cusm_0.66_1.00_0.01/b5f2cd_5833de54beb6448ba2ce8948280d9e77%7Emv2.png" alt="MR Logo" style="height: 60px; margin-bottom: 20px; object-fit: contain;">
+          <img src="https://i.imgur.com/nHCetrv.png" alt="MR Logo" style="height: 60px; margin-bottom: 20px; object-fit: contain;">
           <h1>Access Denied</h1>
           <p>Your account has been deactivated. You do not have permission to access the MR Hub. Please contact your administrator if you believe this is a mistake.</p>
         </div>

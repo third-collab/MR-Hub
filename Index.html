@@ -12,79 +12,32 @@
     body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: var(--brand-yellow); color: var(--brand-grey); margin: 0; padding: 0; position: relative; overflow-x: hidden; }
     body::before { content: ""; position: absolute; top: -100px; right: -100px; width: 400px; height: 400px; border: 40px solid rgba(217, 241, 221, 0.4); border-radius: 50%; z-index: -1; }
     .header { 
-      background-color: var(--brand-grey); 
-      color: var(--brand-white); 
-      padding: 20px 40px; 
-      box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
-      display: flex; 
-      justify-content: space-between; 
-      align-items: center; 
-      /* NEW RULES TO FIX THE EDGE BLEED: */
-      position: relative; 
-      box-sizing: border-box; 
-      width: 100%;
+      background-color: var(--brand-grey); color: var(--brand-white); padding: 20px 40px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); 
+      display: flex; justify-content: space-between; align-items: center; position: relative; box-sizing: border-box; width: 100%;
     }
     .header-popup { 
-      display: none; 
-      position: fixed !important; 
-      top: 57px !important; /* <--- REDUCED THIS NUMBER */
-      right: 40px !important; 
-      width: 250px; 
-      background: white; 
-      color: #333; 
-      padding: 15px; 
-      border-radius: 8px; 
-      box-shadow: 0 8px 15px rgba(0,0,0,0.2); /* Softened the shadow so it blends better */
-      z-index: 99999 !important; 
-      border: 1px solid #ddd;
+      display: none; position: fixed !important; top: 57px !important; right: 40px !important; width: 250px; background: white; 
+      color: #333; padding: 15px; border-radius: 8px; box-shadow: 0 8px 15px rgba(0,0,0,0.2); z-index: 99999 !important; border: 1px solid #ddd;
     }
     .header-logo { display: flex; align-items: center; }
     .header h1 { margin: 0; font-size: 26px; font-weight: 700; letter-spacing: 1px; }
     .header-user-pill {
-      display: flex;
-      align-items: center;
-      font-size: 15px;
-      font-weight: 600;
-      background-color: rgba(255,255,255,0.1);
-      padding: 8px 16px;
-      border-radius: 20px;
+      display: flex; align-items: center; font-size: 15px; font-weight: 600; background-color: rgba(255,255,255,0.1); padding: 8px 16px; border-radius: 20px; cursor: pointer; position: relative;
     }
     .header-right { display: flex; align-items: center; gap: 20px; }
     .header-tools { display: flex; align-items: center; gap: 15px; }
     .header-clock { font-size: 14px; font-weight: 500; cursor: pointer; padding: 5px; border-radius: 4px; }
     .header-clock:hover { background: rgba(255,255,255,0.1); }
     
-    .header-user-pill { cursor: pointer; position: relative; }
-    
     /* Calendar Grid Styles */
     .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 12px; }
     .cal-day-header { font-weight: bold; color: #666; }
     .cal-day { padding: 5px; border-radius: 4px; }
     .cal-today { background-color: var(--brand-red); color: white; font-weight: bold; }
-    
-    /*.header-popup { display: none; position: absolute; top: 45px; right: 0; width: 250px; background: white; color: #333; padding: 15px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); z-index: 1000; }*/
 
-    .notif-badge {
-      position: absolute;
-      top: -5px;
-      right: -5px;
-      background-color: var(--brand-red);
-      color: white;
-      font-size: 10px;
-      font-weight: bold;
-      border-radius: 50%;
-      padding: 2px 6px;
-      display: none; /* Hidden if 0 */
-    }
-    .notif-item {
-      padding: 10px 10px; 
-      border-bottom: 1px solid #eee; 
-      transition: background-color 0.5s ease;
-    }
-    .notif-unread {
-      background-color: rgba(255, 0, 0, 0.05); /* Slight red tint for unread */
-      border-left: 3px solid var(--brand-red);
-    }
+    .notif-badge { position: absolute; top: -5px; right: -5px; background-color: var(--brand-red); color: white; font-size: 10px; font-weight: bold; border-radius: 50%; padding: 2px 6px; display: none; }
+    .notif-item { padding: 10px 10px; border-bottom: 1px solid #eee; transition: background-color 0.5s ease; }
+    .notif-unread { background-color: rgba(255, 0, 0, 0.05); border-left: 3px solid var(--brand-red); }
     
     .container { max-width: 1000px; margin: 40px auto; padding: 0 20px; }
     .module-group-title { font-size: 20px; color: var(--brand-red); border-bottom: 2px solid #E3E3E3; padding-bottom: 10px; margin-top: 40px; margin-bottom: 20px; }
@@ -94,7 +47,6 @@
     .card h3 { margin-top: 0; color: var(--brand-grey); font-size: 22px; font-weight: 700; }
     .card p { color: var(--brand-grey); font-size: 15px; line-height: 1.6; opacity: 0.8; }
     .card.disabled { opacity: 0.7; cursor: not-allowed; border-bottom-color: #E3E3E3; }
-    /* Add this for icon consistency */
     .card-icon { width: 32px; height: 32px; margin-bottom: 15px; color: var(--brand-red); display: block; }
 
     /* --- ONE-LINE FILTER BAR & DROPDOWNS --- */
@@ -103,10 +55,8 @@
     .filter-input:focus { border-color: var(--brand-red); box-shadow: 0 0 0 2px rgba(196, 0, 4, 0.2); }
     .btn-filter-toggle { background: #E3E3E3; color: var(--brand-grey); border: none; padding: 12px 20px; border-radius: var(--border-radius-small); font-weight: bold; font-size: 14px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: 0.2s; flex-shrink: 0; }
     .btn-filter-toggle:hover { background: #ccc; }
-    
     .filter-advanced { display: none; align-items: center; gap: 15px; flex-shrink: 0; }
     .filter-advanced.active { display: flex; }
-    
     .custom-dropdown { position: relative; display: inline-block; }
     .dropdown-btn { background: #E3E3E3; border: none; padding: 12px 20px; border-radius: var(--border-radius-small); font-size: 14px; font-family: inherit; color: var(--brand-grey); cursor: pointer; font-weight: bold; display: flex; align-items: center; gap: 8px; transition: 0.2s; }
     .dropdown-btn:hover { background: #ccc; }
@@ -128,46 +78,17 @@
     thead th { background-color: var(--brand-offwhite); color: var(--brand-grey); padding: 15px; font-weight: 700; border-bottom: 2px solid #E3E3E3; }
     tbody td { padding: 15px; border-bottom: 1px solid #E3E3E3; color: var(--brand-grey); }
     tbody tr:hover { background-color: var(--brand-offwhite); }
+
     /* --- STATUS BADGES (Harmonized Mid-Tones) --- */
     .badge { 
-      padding: 6px 14px; 
-      border-radius: 20px; 
-      font-size: 12px; 
-      font-weight: 700; 
-      display: inline-block;
-      text-align: center;
-      background-color: #E3E3E3; 
-      color: var(--brand-grey); 
-      border: 1px solid transparent;
+      padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 700; display: inline-block; text-align: center;
+      background-color: #E3E3E3; color: var(--brand-grey); border: 1px solid transparent;
     }
-    
-    .badge-active {
-      /* Darkened slightly from the previous super-light version */
-      background-color: #D1E7DD; 
-      color: #0F5132;
-      border-color: #BADBCC;
-    }
-    
-    .badge-inactive {
-      /* Softened from the heavy brand-red to match the pastel spectrum */
-      background-color: #F8D7DA; 
-      color: #842029;
-      border-color: #F5C2C7;
-    }
-    
-    .badge-onboarding {
-      /* Softened from the heavy brand-yellow */
-      background-color: #FFF3CD; 
-      color: #664D03;
-      border-color: #FFECB5;
-    }
-    
-    .badge-paused {
-      /* Darkened slightly to hold its own against the other colors */
-      background-color: #E2E3E5; 
-      color: #41464B;
-      border-color: #D3D6D8;
-    }
+    .badge-active { background-color: #D1E7DD; color: #0F5132; border-color: #BADBCC; }
+    .badge-inactive { background-color: #F8D7DA; color: #842029; border-color: #F5C2C7; }
+    .badge-onboarding { background-color: #FFF3CD; color: #664D03; border-color: #FFECB5; }
+    .badge-paused { background-color: #E2E3E5; color: #41464B; border-color: #D3D6D8; }
+
     .btn-edit { background: none; border: 1px solid var(--brand-grey); color: var(--brand-grey); padding: 6px 12px; border-radius: var(--border-radius-small); cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
     .btn-edit:hover { background-color: var(--brand-grey); color: var(--brand-white); }
     .form-wrapper { background-color: var(--brand-offwhite); padding: 40px; border-radius: var(--border-radius-large); box-shadow: 0 6px 15px rgba(0,0,0,0.1); max-width: 750px; margin: 0 auto; border: 1px solid #E3E3E3; }
@@ -184,42 +105,9 @@
     .form-group { flex: 1; min-width: 250px; }
     label { display: block; font-weight: 700; margin-bottom: 8px; font-size: 14px; color: var(--brand-grey); }
     input[type="text"], input[type="email"], input[type="number"], input[type="date"], input[type="url"], input[type="file"], select { width: 100%; padding: 14px; border: 1px solid #ccc; border-radius: var(--border-radius-small); box-sizing: border-box; font-family: inherit; background-color: var(--brand-white); }
-    input[type="file"]::file-selector-button {
-      padding: 8px 16px;
-      margin-right: 15px;
-      background-color: #E3E3E3;
-      color: var(--brand-grey);
-      border: none;
-      border-radius: var(--border-radius-small);
-      font-weight: bold;
-      font-family: inherit;
-      cursor: pointer;
-      transition: background-color 0.2s;
-    }
-    .btn-add-row {
-      background-color: #f1f3f4;
-      color: #5f6368;
-      border: 1px solid #dadce0;
-      border-radius: 4px;
-      padding: 6px 12px;
-      font-size: 12px;
-      font-weight: 600;
-      cursor: pointer;
-      transition: all 0.2s ease;
-      display: flex;
-      align-items: center;
-      gap: 5px; /* Spaces out the + sign and text */
-    }
-
-    .btn-add-row:hover {
-      background-color: #e8eaed;
-      color: #202124;
-      border-color: #d5d8dc;
-    }
-
-    input[type="file"]::file-selector-button:hover {
-      background-color: #ccc;
-    }
+    input[type="file"]::file-selector-button { padding: 8px 16px; margin-right: 15px; background-color: #E3E3E3; color: var(--brand-grey); border: none; border-radius: var(--border-radius-small); font-weight: bold; font-family: inherit; cursor: pointer; transition: background-color 0.2s; }
+    .btn-add-row { background-color: #f1f3f4; color: #5f6368; border: 1px solid #dadce0; border-radius: 4px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; display: flex; align-items: center; gap: 5px; }
+    .btn-add-row:hover { background-color: #e8eaed; color: #202124; border-color: #d5d8dc; }
     input:focus, select:focus { outline: none; border-color: var(--brand-red); box-shadow: 0 0 0 2px rgba(196, 0, 4, 0.2); }
     .checkbox-group { display: flex; flex-direction: column; gap: 10px; background: var(--brand-white); padding: 15px; border-radius: var(--border-radius-small); border: 1px solid #ccc; }
     .checkbox-label { display: flex; align-items: center; font-weight: normal; font-size: 15px; cursor: pointer; margin: 0; }
@@ -247,68 +135,60 @@
     <div class="header-right">
       <div class="header-tools">
         <span id="live-clock" class="header-clock" onclick="event.stopPropagation(); togglePopup('calendar-popup')"></span>
-        
         <div class="icon-container" style="position: relative;">
           <svg class="header-icon" onclick="event.stopPropagation(); togglePopup('notif-popup')" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
           <span id="notif-badge" class="notif-badge">0</span>
         </div>
       </div>
-
-      <div class="header-user-pill" onclick="event.stopPropagation(); togglePopup('user-popup')">
-        Hello, <span id="display-username"></span>!
-      </div>
+      <div class="header-user-pill" onclick="event.stopPropagation(); togglePopup('user-popup')">Hello, <span id="display-username"></span>!</div>
     </div>
   </div>
-
-
 
   <div id="calendar-popup" class="header-popup">
     <div id="calendar-header" style="font-weight: bold; text-align: center; margin-bottom: 10px;"></div>
     <div id="calendar-grid" class="calendar-grid"></div>
   </div>
-  <div id="notif-popup" class="header-popup">
-    <p style="font-size: 12px; color: #888;">No new notifications.</p>
-  </div>
-  <div id="user-popup" class="header-popup">
-    <p style="font-size: 12px; color: #888;">Settings coming soon...</p>
-  </div>
+  <div id="notif-popup" class="header-popup"><p style="font-size: 12px; color: #888;">No new notifications.</p></div>
+  <div id="user-popup" class="header-popup"><p style="font-size: 12px; color: #888;">Settings coming soon...</p></div>
 
   <div id="dashboardView" class="container">
     <h2 style="margin-bottom: 10px; color: var(--brand-grey);">Welcome, select a module:</h2>
     
-    <h3 class="module-group-title">Setup and Data</h3>
+    <h3 class="module-group-title">System and Data</h3>
     <div class="card-grid">
-      <div class="card" onclick="switchView('clientListView')">
+      
+      <div class="card" id="card-clients" onclick="switchView('clientListView')">
         <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
-        <h3>Client Data</h3>
-        <p>View and manage all active clients, and onboard new accounts.</p>
+        <h3>Clients</h3>
+        <p>View and manage the master client database, contact info, and contracts.</p>
       </div>
+
       <div class="card" id="card-users" onclick="switchView('usersListView')" style="display: none;">
         <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         <h3>Users</h3>
         <p>Manage system access, roles, and staff directory profiles.</p>
       </div>
-      <div class="card" onclick="switchView('templatesListView'); loadTemplatesTable();">
+
+      <div class="card" id="card-templates" onclick="switchView('templatesListView'); loadTemplatesTable();">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 10px; color: var(--brand-red);"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>
         <h3>Templates</h3>
-        <p>Manage email and system templates</p>
+        <p>Manage email and system templates.</p>
       </div>
     </div>
 
     <h3 class="module-group-title">Operational Tools</h3>
     <div class="card-grid">
-      <div class="card" onclick="switchView('onboardingTasksView')">
+      
+      <div class="card" id="card-onboarding" onclick="switchView('onboardingTasksView')">
         <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="8.5" cy="7" r="4"></circle><line x1="20" y1="8" x2="20" y2="14"></line><line x1="23" y1="11" x2="17" y2="11"></line></svg>
-        <h3>Client Onboarding</h3>
-        <p>Start the intake process for new clients.</p>
+        <h3>Onboarding Management</h3>
+        <p>Track progress and tasks for clients currently in the onboarding phase.</p>
       </div>
-
       <div class="card" onclick="switchView('ticketListView')">
         <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8h2a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h2"></path><path d="M12 2v6"></path><path d="M16 6l-4 4-4-4"></path></svg>
         <h3>Ticket Management</h3>
         <p>Track, assign, and resolve client support requests.</p>
       </div>
-
       <div class="card disabled">
         <svg class="card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
         <h3>Inventory Management</h3>
@@ -362,307 +242,169 @@
 
   <script>
     /* --- GLOBAL SCRIPTS & LOGIC --- */
-    var CURRENT_USER_ROLE = "<?= userRole ?>"; 
+    var CURRENT_USER_ROLE = "<?= userRole ?>";
     var ACCOUNT_MANAGERS = <?!= accountManagers ?>; 
-    var CURRENT_USERNAME = "<?= username ?>"; 
+    var CURRENT_USERNAME = "<?= username ?>";
 
     document.addEventListener("DOMContentLoaded", function() {
       document.getElementById('display-username').innerHTML = CURRENT_USERNAME;
-
-      // Restrict access based on role
       if (CURRENT_USER_ROLE === 'Account Manager' || CURRENT_USER_ROLE === 'Account Support') {
         var btnNewClient = document.getElementById('btn-new-client');
         if (btnNewClient) btnNewClient.style.display = 'none';
       }
-      
       if (CURRENT_USER_ROLE === 'Sales Manager') {
         var secOp = document.getElementById('section-operational');
         if (secOp) secOp.style.display = 'none';
       }
-      
-      // Admin-only modules
       if (CURRENT_USER_ROLE === 'Admin') {
         var usersCard = document.getElementById('card-users');
         if (usersCard) usersCard.style.display = 'block';
-        
         var healthCard = document.getElementById('card-healthPoints');
         if (healthCard) healthCard.style.display = 'block';
       }
-      
-      // Load AM dropdowns
       var amSelect = document.getElementById('ed-accountManager');
       if(amSelect) {
         ACCOUNT_MANAGERS.forEach(function(name) {
           var opt = document.createElement('option');
-          opt.value = name; opt.innerHTML = name;
-          amSelect.appendChild(opt);
+          opt.value = name; opt.innerHTML = name; amSelect.appendChild(opt);
         });
       }
-
       fetchNotifications();
-
       setInterval(function() {
         var notifPopup = document.getElementById('notif-popup');
-        
-        // Only fetch and rebuild if the user is NOT currently looking at the menu
-        if (notifPopup.style.display !== 'block') {
-          fetchNotifications();
-        }
-      }, 60000); // 60000 milliseconds = 1 minute
+        if (notifPopup.style.display !== 'block') fetchNotifications();
+      }, 60000);
     });
 
-    // Toggle Advanced Filters Row (Bulletproof version)
     function toggleFilter(id) {
       var el = document.getElementById(id);
       if (el) {
-        // Toggle the class for CSS animations if you have them
         el.classList.toggle('active');
-        
-        // Force the inline style to obey the click, overriding any hardcoded HTML styles
-        if (el.classList.contains('active')) {
-          el.style.display = 'flex';
-        } else {
-          el.style.display = 'none';
-        }
+        el.style.display = el.classList.contains('active') ? 'flex' : 'none';
       }
     }
 
-    // Toggle Custom Checkbox Dropdowns
     function toggleDropdown(id) {
       var dropdown = document.getElementById(id);
-      // Close other open dropdowns first
       document.querySelectorAll('.dropdown-content').forEach(function(content) {
         if(content.id !== id) content.classList.remove('show');
       });
       dropdown.classList.toggle('show');
     }
 
-    // Close Dropdowns if clicked outside
     document.addEventListener('click', function(event) {
       if (!event.target.closest('.custom-dropdown')) {
-        document.querySelectorAll('.dropdown-content').forEach(function(content) {
-          content.classList.remove('show');
-        });
+        document.querySelectorAll('.dropdown-content').forEach(function(content) { content.classList.remove('show'); });
       }
     });
 
-    // Global View Switcher
-    // Update this inside your <script> section
     function switchView(viewId) {
-      // 1. DYNAMICALLY HIDE ALL VIEWS (Future-proof!)
       var allViews = document.querySelectorAll('.container');
-      allViews.forEach(function(el) {
-        el.style.display = 'none';
-      });
-      
-      // 2. SHOW THE TARGET VIEW
+      allViews.forEach(function(el) { el.style.display = 'none'; });
       var targetView = document.getElementById(viewId);
-      if (targetView) {
-        targetView.style.display = 'block';
-      } else {
-        console.error("Could not find view with ID: " + viewId);
-        return; // Stop execution if the view doesn't exist
-      }
+      if (targetView) { targetView.style.display = 'block'; } else { return; }
 
-      // 3. TRIGGER DATA LOADING & RESETS BASED ON VIEW
-      
       // --- CLIENTS ---
       if (viewId === 'clientListView') {
         var clientBody = document.getElementById('clientTableBody') || document.getElementById('client-list-body');
         if (clientBody) clientBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">Loading data...</td></tr>';
-        
         google.script.run.withSuccessHandler(populateClientsTable).getClientsList();
       }
-      
-      if (viewId === 'addClientView') { // Updated from onboardingView
+      if (viewId === 'addClientView') {
         var statusEl = document.getElementById('add-status') || document.getElementById('ob-status');
         if (statusEl) statusEl.innerHTML = ''; 
-        if (typeof navigateClientTab === "function") navigateClientTab('add', 'clientInfo'); 
+        if (typeof navigateClientTab === "function") navigateClientTab('add', 'clientInfo');
       }
-      
       if (viewId === 'editClientView') { 
         var editStatus = document.getElementById('ed-statusMsg');
         if (editStatus) editStatus.innerHTML = ''; 
       }
-      
-      if (viewId === 'onboardingTasksView') {
-        if (typeof loadOnboardingClients === "function") loadOnboardingClients();
-      }
-      
+      if (viewId === 'onboardingTasksView') { if (typeof loadOnboardingClients === "function") loadOnboardingClients(); }
       // --- USERS ---
       if (viewId === 'usersListView') {
         var userBody = document.getElementById('userTableBody');
         if (userBody) userBody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">Loading users...</td></tr>';
         google.script.run.withSuccessHandler(populateUsersTable).getUsersList();
       }
-      
       if (viewId === 'addUserView') { 
         var addUserStatus = document.getElementById('add-user-status');
         if (addUserStatus) addUserStatus.innerHTML = ''; 
         var addForm = document.getElementById('addUserForm');
-        if (addForm) addForm.reset(); 
+        if (addForm) addForm.reset();
       }
-      
       if (viewId === 'editUserView') { 
         var editUserStatus = document.getElementById('edit-user-status');
         if (editUserStatus) editUserStatus.innerHTML = ''; 
       }
-
       // --- TEMPLATES ---
       if (viewId === 'templatesListView') {
         var templateBody = document.getElementById('tmp-list-body');
         if (templateBody) templateBody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 30px;">Loading templates...</td></tr>';
-        // Trigger your template loading function here
-        if (typeof loadTemplates === "function") {
-          loadTemplates();
-        }
+        if (typeof loadTemplatesTable === "function") loadTemplatesTable();
       }
     }
 
     function renderCalendar() {
-      var now = new Date();
-      var year = now.getFullYear();
-      var month = now.getMonth();
-      
-      // Set Header
+      var now = new Date(); var year = now.getFullYear(); var month = now.getMonth();
       var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       document.getElementById('calendar-header').innerText = monthNames[month] + " " + year;
-      
-      // Grid Setup
       var grid = document.getElementById('calendar-grid');
       grid.innerHTML = '<div class="cal-day-header">Su</div><div class="cal-day-header">Mo</div><div class="cal-day-header">Tu</div><div class="cal-day-header">We</div><div class="cal-day-header">Th</div><div class="cal-day-header">Fr</div><div class="cal-day-header">Sa</div>';
-      
-      var firstDay = new Date(year, month, 1).getDay();
-      var daysInMonth = new Date(year, month + 1, 0).getDate();
-      
-      // Empty slots for start of month
+      var firstDay = new Date(year, month, 1).getDay(); var daysInMonth = new Date(year, month + 1, 0).getDate();
       for(var i = 0; i < firstDay; i++) { grid.innerHTML += '<div></div>'; }
-      
-      // Days
       for(var i = 1; i <= daysInMonth; i++) {
         var isToday = (i === now.getDate()) ? 'cal-today' : '';
         grid.innerHTML += '<div class="cal-day ' + isToday + '">' + i + '</div>';
       }
     }
-
-    // Run on load
     renderCalendar();
-
-    // Clock Logic
     function updateHeaderClock() {
-      var now = new Date();
-      var options = { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
+      var now = new Date(); var options = { month: 'long', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' };
       document.getElementById('live-clock').innerText = now.toLocaleDateString('en-US', options);
     }
-    setInterval(updateHeaderClock, 1000);
-    updateHeaderClock();
-
-    // Popup Logic
+    setInterval(updateHeaderClock, 1000); updateHeaderClock();
     function togglePopup(id) {
-      var popup = document.getElementById(id);
-      
-      // Check if it's already open
-      var isOpen = (popup.style.display === 'block');
-      
-      // Close ALL popups first
-      document.querySelectorAll('.header-popup').forEach(p => { 
-        p.style.display = 'none'; 
-      });
-      
-      // If it wasn't open, open it
-      if (!isOpen) {
-        popup.style.display = 'block';
-      }
+      var popup = document.getElementById(id); var isOpen = (popup.style.display === 'block');
+      document.querySelectorAll('.header-popup').forEach(p => { p.style.display = 'none'; });
+      if (!isOpen) popup.style.display = 'block';
     }
+    document.addEventListener('click', function(e) { document.querySelectorAll('.header-popup').forEach(p => { p.style.display = 'none'; }); });
 
-    // Close when clicking anywhere else
-    document.addEventListener('click', function(e) {
-      document.querySelectorAll('.header-popup').forEach(p => { 
-        p.style.display = 'none'; 
-      });
-    });
-
-  function fetchNotifications() {
-    var notifPopup = document.getElementById('notif-popup');
-    notifPopup.innerHTML = '<p style="font-size: 12px; color: #888; margin: 0; padding: 15px;">Loading...</p>';
-    
-    // Pass '10' as the limit for the popup
-    google.script.run.withSuccessHandler(function(notifs) {
-      var unreadCount = 0;
-      var html = '<h4 style="margin: 0 0 10px 0;">Notifications</h4><div id="notif-scroll-box" style="max-height: 250px; overflow-y: auto;">';
-      
-      if (notifs.length === 0) {
-        html += '<p style="font-size: 12px; color: #888; margin: 0;">No new notifications.</p></div>';
-      } else {
-        notifs.forEach(function(n) {
-          var bgClass = n.isRead ? "" : "notif-unread";
-          if (!n.isRead) unreadCount++;
-          
-          html += '<div class="notif-item ' + bgClass + '" data-row="' + n.row + '">';
-          html += '<div style="font-size: 13px; color: #333;">' + n.message + '</div>';
-          html += '<div style="font-size: 11px; color: #999; margin-top: 4px;">' + n.time + '</div>';
+    function fetchNotifications() {
+      var notifPopup = document.getElementById('notif-popup');
+      notifPopup.innerHTML = '<p style="font-size: 12px; color: #888; margin: 0; padding: 15px;">Loading...</p>';
+      google.script.run.withSuccessHandler(function(notifs) {
+        var unreadCount = 0;
+        var html = '<h4 style="margin: 0 0 10px 0;">Notifications</h4><div id="notif-scroll-box" style="max-height: 250px; overflow-y: auto;">';
+        if (notifs.length === 0) { html += '<p style="font-size: 12px; color: #888; margin: 0;">No new notifications.</p></div>'; } else {
+          notifs.forEach(function(n) {
+            var bgClass = n.isRead ? "" : "notif-unread"; if (!n.isRead) unreadCount++;
+            html += '<div class="notif-item ' + bgClass + '" data-row="' + n.row + '"><div style="font-size: 13px; color: #333;">' + n.message + '</div><div style="font-size: 11px; color: #999; margin-top: 4px;">' + n.time + '</div></div>';
+          });
           html += '</div>';
-        });
-        html += '</div>';
-      }
-      
-      // ADD THE "VIEW ALL" BUTTON
-      html += '<div style="padding-top: 10px; margin-top: 5px; text-align: center; border-top: 1px solid #eee;">';
-      html += '<button onclick="openNotificationsPage()" style="background:none; border:none; color:var(--brand-red); cursor:pointer; font-weight:bold; font-size: 13px; width:100%;">View All Notifications</button>';
-      html += '</div>';
-      
-      notifPopup.innerHTML = html;
-      
-      var badge = document.getElementById('notif-badge');
-      badge.innerText = unreadCount;
-      badge.style.display = unreadCount > 0 ? 'block' : 'none';
-
-      setupNotificationObserver();
-
-    }).getMyNotifications(10, true); 
-  }
-
-  // Helper to open the full page
-  function openNotificationsPage() {
-    document.getElementById('notif-popup').style.display = 'none'; // Hide the popup
-    switchView('notificationsListView'); // Switch the main screen
-    loadFullNotifications(); // Fetch the 100 history logs
-  }
-
-  function setupNotificationObserver() {
-    var unreadItems = document.querySelectorAll('.notif-unread');
-    if (unreadItems.length === 0) return;
-
-    var observer = new IntersectionObserver(function(entries, obs) {
-      entries.forEach(function(entry) {
-        if (entry.isIntersecting) {
-          var el = entry.target;
-          var rowIndex = el.getAttribute('data-row');
-          
-          // 1. Tell backend to add username to "Read By" column
-          google.script.run.markNotificationAsRead(rowIndex);
-          
-          // 2. Remove the red tint visually
-          el.classList.remove('notif-unread');
-          el.style.borderLeft = "none";
-          obs.unobserve(el); // Stop watching this item
-          
-          // 3. Decrement the badge counter
-          var badge = document.getElementById('notif-badge');
-          var count = parseInt(badge.innerText) - 1;
-          badge.innerText = count;
-          if (count <= 0) badge.style.display = 'none';
         }
-      });
-    }, { 
-      root: document.getElementById('notif-scroll-box'), 
-      threshold: 0.5 // Triggers when 50% of the notification is visible in the scroll box
-    });
-
-    unreadItems.forEach(function(item) {
-      observer.observe(item);
-    });
-  }
+        html += '<div style="padding-top: 10px; margin-top: 5px; text-align: center; border-top: 1px solid #eee;"><button onclick="openNotificationsPage()" style="background:none; border:none; color:var(--brand-red); cursor:pointer; font-weight:bold; font-size: 13px; width:100%;">View All Notifications</button></div>';
+        notifPopup.innerHTML = html;
+        var badge = document.getElementById('notif-badge'); badge.innerText = unreadCount; badge.style.display = unreadCount > 0 ? 'block' : 'none';
+        setupNotificationObserver();
+      }).getMyNotifications(10, true); 
+    }
+    function openNotificationsPage() {
+      document.getElementById('notif-popup').style.display = 'none'; switchView('notificationsListView'); if (typeof loadFullNotifications === "function") loadFullNotifications();
+    }
+    function setupNotificationObserver() {
+      var unreadItems = document.querySelectorAll('.notif-unread'); if (unreadItems.length === 0) return;
+      var observer = new IntersectionObserver(function(entries, obs) {
+        entries.forEach(function(entry) {
+          if (entry.isIntersecting) {
+            var el = entry.target; var rowIndex = el.getAttribute('data-row');
+            google.script.run.markNotificationAsRead(rowIndex); el.classList.remove('notif-unread'); el.style.borderLeft = "none"; obs.unobserve(el);
+            var badge = document.getElementById('notif-badge'); var count = parseInt(badge.innerText) - 1; badge.innerText = count; if (count <= 0) badge.style.display = 'none';
+          }
+        });
+      }, { root: document.getElementById('notif-scroll-box'), threshold: 0.5 });
+      unreadItems.forEach(function(item) { observer.observe(item); });
+    }
   </script>
 </body>
 </html>
