@@ -7,14 +7,13 @@
   </div>
 
   <div class="filter-wrapper">
-    <input type="text" id="client-filter-search" class="filter-input" placeholder="Search by Company, Brand, or Contact..." onkeyup="applyClientFilters()">
+    <input type="text" id="client-filter-search" class="filter-input" placeholder="Search by Brand, Contact, or Services..." onkeyup="applyClientFilters()">
     <button class="btn-filter-toggle" onclick="toggleFilter('client-adv')">
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
       Filters
     </button>
     
-    <div id="client-adv" class="filter-advanced" style="display: flex; gap: 10px;">
-      
+    <div id="client-adv" class="filter-advanced">
       <div class="custom-dropdown">
         <button class="dropdown-btn" onclick="toggleDropdown('client-status-drop')">Status ▼</button>
         <div class="dropdown-content" id="client-status-drop">
@@ -33,7 +32,6 @@
           <label><input type="checkbox" class="client-filter-service-cb" value="Branded Listing Optimization" checked onchange="applyClientFilters()"> Branded Listing Optimization</label>
         </div>
       </div>
-      
     </div>
   </div>
 
@@ -41,9 +39,9 @@
     <table>
       <thead>
         <tr>
-          <th class="sortable" onclick="handleClientSort('companyName')">Company Name <span id="csort-companyName" class="sort-icon"></span></th>
           <th class="sortable" onclick="handleClientSort('brandName')">Brand Name <span id="csort-brandName" class="sort-icon"></span></th>
           <th class="sortable" onclick="handleClientSort('primaryContact')">Primary Contact <span id="csort-primaryContact" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('services')">Services <span id="csort-services" class="sort-icon"></span></th>
           <th class="sortable" onclick="handleClientSort('status')">Status <span id="csort-status" class="sort-icon"></span></th>
           <th>Action</th>
         </tr>
@@ -337,27 +335,7 @@
       initClientEditors();
     }
   }
-
-  function toggleFilter(filterId) {
-    var el = document.getElementById(filterId);
-    if (el) el.style.display = (el.style.display === 'flex' || el.style.display === 'block') ? 'none' : 'flex';
-  }
-
-  function toggleDropdown(dropId) {
-    var el = document.getElementById(dropId);
-    if (el) el.style.display = (el.style.display === 'block') ? 'none' : 'block';
-  }
-
-  document.addEventListener('click', function(event) {
-    var clientAdv = document.getElementById('client-adv');
-    var statusDrop = document.getElementById('client-status-drop');
-    var serviceDrop = document.getElementById('client-service-drop');
-    if (clientAdv && !clientAdv.contains(event.target)) {
-      if (statusDrop) statusDrop.style.display = 'none';
-      if (serviceDrop) serviceDrop.style.display = 'none';
-    }
-  });
-
+  
   /* ========================================================================
      2. RICH TEXT EDITOR & DATE FORMATTER
      ======================================================================== */
@@ -562,6 +540,7 @@
       var pContact = ((client.pFirstName || "") + " " + (client.pLastName || "")).toLowerCase();
       var matchesSearch = ((client.companyName || "").toLowerCase().includes(searchText) || 
                            (client.brandName || "").toLowerCase().includes(searchText) || 
+                           (client.services || "").toLowerCase().includes(searchText) || 
                            pContact.includes(searchText));
       
       var matchesStatus = checkedStatuses.length === 0 || checkedStatuses.includes(client.status);
@@ -618,13 +597,21 @@
       };
 
       var pContact = (client.pFirstName || "") + " " + (client.pLastName || "");
-      var statusColor = client.status === 'Active' ? 'var(--brand-yellow)' : '#ccc';
+      
+      // Determine the correct global CSS class based on the status text
+      var badgeClass = "badge"; // default fallback
+      var statusText = (client.status || "").toLowerCase();
+      
+      if (statusText === 'active') badgeClass = 'badge badge-active';
+      else if (statusText === 'inactive') badgeClass = 'badge badge-inactive';
+      else if (statusText === 'onboarding') badgeClass = 'badge badge-onboarding';
+      else if (statusText === 'paused' || statusText === 'pending') badgeClass = 'badge badge-paused';
       
       tr.innerHTML = `
-        <td><strong>${client.companyName || "-"}</strong></td>
-        <td>${client.brandName || "-"}</td>
+        <td><strong>${client.brandName || "-"}</strong></td>
         <td>${pContact.trim() || "-"}</td>
-        <td><span class="badge" style="background-color: ${statusColor}; color: var(--brand-grey);">${client.status || "-"}</span></td>
+        <td>${client.services || "-"}</td>
+        <td><span class="${badgeClass}">${client.status || "-"}</span></td>
         <td><button class="btn-edit" onclick="openEditClientForm(${client.rowIndex})">Edit</button></td>
       `;
       tbody.appendChild(tr);

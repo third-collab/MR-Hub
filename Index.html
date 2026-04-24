@@ -128,7 +128,47 @@
     thead th { background-color: var(--brand-offwhite); color: var(--brand-grey); padding: 15px; font-weight: 700; border-bottom: 2px solid #E3E3E3; }
     tbody td { padding: 15px; border-bottom: 1px solid #E3E3E3; color: var(--brand-grey); }
     tbody tr:hover { background-color: var(--brand-offwhite); }
-    .badge { padding: 5px 10px; border-radius: 20px; font-size: 12px; font-weight: bold; background-color: #E3E3E3; color: var(--brand-grey); }
+    /* --- STATUS BADGES & GRADIENTS --- */
+    .badge { 
+      padding: 6px 14px; 
+      border-radius: 20px; 
+      font-size: 12px; 
+      font-weight: 700; 
+      color: var(--brand-grey); 
+      display: inline-block;
+      text-align: center;
+      /* Default fallback styling */
+      background: #E3E3E3; 
+      border: 1px solid #ccc;
+    }
+    
+    .badge-active {
+      /* Soft vibrant green gradient */
+      background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
+      color: #1a5621;
+      border: 1px solid #84d690;
+    }
+    
+    .badge-inactive {
+      /* Darker grey gradient */
+      background: linear-gradient(135deg, #e0e0e0 0%, #b8b8b8 100%);
+      color: #4a4a4a;
+      border: 1px solid #a3a3a3;
+    }
+    
+    .badge-onboarding {
+      /* Matching your --brand-yellow */
+      background: linear-gradient(135deg, #ffe98a 0%, #FDDD64 100%);
+      color: #6b5c17;
+      border: 1px solid #ecd15a;
+    }
+    
+    .badge-paused {
+      /* Light airy grey/blue gradient */
+      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+      color: #6c757d;
+      border: 1px solid #d1d4d6;
+    }
     .btn-edit { background: none; border: 1px solid var(--brand-grey); color: var(--brand-grey); padding: 6px 12px; border-radius: var(--border-radius-small); cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
     .btn-edit:hover { background-color: var(--brand-grey); color: var(--brand-white); }
     .form-wrapper { background-color: var(--brand-offwhite); padding: 40px; border-radius: var(--border-radius-large); box-shadow: 0 6px 15px rgba(0,0,0,0.1); max-width: 750px; margin: 0 auto; border: 1px solid #E3E3E3; }
@@ -315,7 +355,7 @@
   <div id="healthPointsView" class="container" style="display: none;"><button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button><h2>Health Points</h2><p>Coming soon...</p></div>
 
 
-  <?!= include('ClientData'); ?>
+  <?!= include('ClientsData'); ?>
   <?!= include('UsersData'); ?>
   <?!= include('OnboardingData'); ?>
   <?!= include('TemplatesData'); ?>
@@ -372,10 +412,20 @@
       }, 60000); // 60000 milliseconds = 1 minute
     });
 
-    // Toggle Advanced Filters Row
+    // Toggle Advanced Filters Row (Bulletproof version)
     function toggleFilter(id) {
       var el = document.getElementById(id);
-      if(el) el.classList.toggle('active');
+      if (el) {
+        // Toggle the class for CSS animations if you have them
+        el.classList.toggle('active');
+        
+        // Force the inline style to obey the click, overriding any hardcoded HTML styles
+        if (el.classList.contains('active')) {
+          el.style.display = 'flex';
+        } else {
+          el.style.display = 'none';
+        }
+      }
     }
 
     // Toggle Custom Checkbox Dropdowns

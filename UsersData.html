@@ -276,7 +276,6 @@
       var tr = document.createElement('tr');
       tr.style.cursor = "pointer"; // Make it look clickable
       
-      // NEW: Add click event to the whole row
       tr.onclick = function(e) { 
         if (!e.target.closest('.btn-edit')) {
           viewUser(user.rowIndex); 
@@ -284,7 +283,15 @@
       };
 
       var fullName = (user.firstName || "") + " " + (user.lastName || "");
-      var statusColor = user.status === 'Active' ? 'var(--brand-yellow)' : '#ccc';
+      
+      // --- UNIFIED STATUS BADGE LOGIC ---
+      var badgeClass = "badge"; // default fallback
+      var statusText = (user.status || "").toLowerCase();
+      
+      if (statusText === 'active') badgeClass = 'badge badge-active';
+      else if (statusText === 'inactive') badgeClass = 'badge badge-inactive';
+      else if (statusText === 'onboarding') badgeClass = 'badge badge-onboarding';
+      else if (statusText === 'paused' || statusText === 'pending') badgeClass = 'badge badge-paused';
       
       tr.innerHTML = `
         <td><strong>${user.username}</strong></td>
@@ -292,7 +299,7 @@
         <td>${user.workEmail}</td>
         <td><span class="badge">${user.role}</span></td>
         <td>${user.position || '-'}</td>
-        <td><span class="badge" style="background-color: ${statusColor}; color: var(--brand-grey);">${user.status}</span></td>
+        <td><span class="${badgeClass}">${user.status}</span></td>
         <td><button class="btn-edit" onclick="openEditUserForm(${user.rowIndex})">Edit</button></td>
       `;
       tbody.appendChild(tr);

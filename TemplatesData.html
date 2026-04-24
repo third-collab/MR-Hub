@@ -418,7 +418,15 @@
     }
     
     filtered.forEach(function(t) {
-      var statusColor = t.status === 'Active' ? 'var(--brand-yellow)' : '#ccc';
+      
+      // --- UNIFIED STATUS BADGE LOGIC ---
+      var badgeClass = "badge"; // default fallback
+      var statusText = (t.status || "").toLowerCase().trim();
+      
+      if (statusText === 'active') badgeClass = 'badge badge-active';
+      else if (statusText === 'inactive') badgeClass = 'badge badge-inactive';
+      else if (statusText === 'onboarding') badgeClass = 'badge badge-onboarding';
+      else if (statusText === 'paused' || statusText === 'pending') badgeClass = 'badge badge-paused';
       
       // We apply the 'onclick' to each data cell individually.
       // The Action cell is left alone, so it doesn't trigger the Read-Only view.
@@ -428,7 +436,7 @@
         <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})">${t.type}</td>
         <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})">${t.wrapperType || 'Internal'}</td>
         <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})">
-          <span class="badge" style="background-color:${statusColor};color:#323232;">${t.status}</span>
+          <span class="${badgeClass}">${t.status}</span>
         </td>
         <td>
           <button class="btn-edit" onclick="openEditTemplateForm(${t.rowIndex})">Edit</button>
