@@ -323,31 +323,31 @@
   function toggleEditor(formType, mode) {
     var quillPrefix = formType === 'add' ? 'add' : 'edit';
     var btnPrefix = formType === 'add' ? 'add' : 'edt'; // Matches your exact HTML!
-    
     var quillInstance = formType === 'add' ? addQuill : editQuill;
     var quillContainer = document.getElementById(quillPrefix + '-quill-container');
     var sourceEditor = document.getElementById(quillPrefix + '-source-editor');
     
     var btnRich = document.getElementById(btnPrefix + '-btn-rich');
     var btnSource = document.getElementById(btnPrefix + '-btn-source');
-
     if (mode === 'source') {
       // Switch TO Source Code
-      sourceEditor.value = quillInstance.root.innerHTML; 
+      sourceEditor.value = quillInstance.root.innerHTML;
       quillContainer.style.display = 'none';
       sourceEditor.style.display = 'block';
       
       // Highlight active button
-      btnSource.style.background = '#e3e3e3'; btnSource.style.color = '#333';
+      btnSource.style.background = '#e3e3e3';
+      btnSource.style.color = '#333';
       btnRich.style.background = 'transparent'; btnRich.style.color = 'var(--brand-grey)';
     } else {
       // Switch TO Rich Text
-      quillInstance.root.innerHTML = sourceEditor.value; 
+      quillInstance.root.innerHTML = sourceEditor.value;
       sourceEditor.style.display = 'none';
       quillContainer.style.display = 'block';
       
       // Highlight active button
-      btnRich.style.background = '#e3e3e3'; btnRich.style.color = '#333';
+      btnRich.style.background = '#e3e3e3';
+      btnRich.style.color = '#333';
       btnSource.style.background = 'transparent'; btnSource.style.color = 'var(--brand-grey)';
     }
     
@@ -357,7 +357,6 @@
 
   function toggleTemplateType(mode) {
     var type = document.getElementById(mode + '-type').value;
-    
     if (type === 'Document') {
       document.getElementById(mode + '-email-editor-section').style.display = 'none';
       document.getElementById(mode + '-doc-url-section').style.display = 'block';
@@ -386,40 +385,37 @@
 
   function applyTemplateFilters() {
     var search = document.getElementById('tmp-filter-search').value.toLowerCase();
-    
-    // Get all checked values from the checkboxes
     var checkedMods = Array.from(document.querySelectorAll('.tmp-filter-mod-cb:checked')).map(cb => cb.value);
     var checkedTypes = Array.from(document.querySelectorAll('.tmp-filter-type-cb:checked')).map(cb => cb.value);
     var checkedStatuses = Array.from(document.querySelectorAll('.tmp-filter-status-cb:checked')).map(cb => cb.value);
-    // Get checked wrappers
     var activeWrappers = Array.from(document.querySelectorAll('.tmp-filter-wrapper-cb:checked')).map(cb => cb.value);
 
-    var filtered = GLOBAL_TMP_DATA.filter(function(t) {
+    var filteredData = GLOBAL_TMP_DATA.filter(function(t) {
       var matchSearch = (t.templateName || "").toLowerCase().includes(search) || 
                         (t.subject || "").toLowerCase().includes(search);
       
-      // We use .trim() here so accidental spaces in the spreadsheet don't hide your data!
       var matchMod = checkedMods.includes((t.targetModule || "").trim());
       var matchType = checkedTypes.includes((t.type || "").trim());
       var matchStatus = checkedStatuses.includes((t.status || "").trim());
-      // Since some older templates might not have a wrapper saved, we default them to "Internal" for the check
       var rowWrapper = t.wrapperType || "Internal"; 
       var matchWrapper = activeWrappers.includes(rowWrapper);
       
       return matchSearch && matchMod && matchType && matchStatus && matchWrapper;
     });
 
+    renderTemplateTableRows(filteredData); 
+  }
+
+  function renderTemplateTableRows(templates) {
     var tbody = document.getElementById('templateTableBody');
     tbody.innerHTML = '';
     
-    if(filtered.length === 0) { 
+    if(templates.length === 0) { 
       tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No templates found matching those filters.</td></tr>'; 
       return; 
     }
     
-    filtered.forEach(function(t) {
-      
-      // --- UNIFIED STATUS BADGE LOGIC ---
+    templates.forEach(function(t) {
       var badgeClass = "badge"; // default fallback
       var statusText = (t.status || "").toLowerCase().trim();
       
@@ -428,8 +424,6 @@
       else if (statusText === 'onboarding') badgeClass = 'badge badge-onboarding';
       else if (statusText === 'paused' || statusText === 'pending') badgeClass = 'badge badge-paused';
       
-      // We apply the 'onclick' to each data cell individually.
-      // The Action cell is left alone, so it doesn't trigger the Read-Only view.
       tbody.innerHTML += `<tr>
         <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})"><strong>${t.templateName}</strong></td>
         <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})">${t.targetModule}</td>
@@ -448,7 +442,6 @@
   function openReadOnlyTemplate(rowIndex) {
     switchView('readOnlyTemplateView');
     document.getElementById('ro-tmp-loading').innerHTML = "Loading...";
-    
     google.script.run
       .withSuccessHandler(function(data) {
         if (!data) return;
@@ -465,7 +458,6 @@
         // Status Badge
         var statusColor = data.status === 'Active' ? 'var(--brand-yellow)' : '#ccc';
         document.getElementById('ro-tmp-status').innerHTML = `<span class="badge" style="background-color:${statusColor};color:#323232; padding: 2px 8px; border-radius: 4px;">${data.status}</span>`;
-        
         // Check template type to determine how to render the preview
         if (data.type === 'Document') {
           // Format Google Doc URL for iframe preview
@@ -486,7 +478,8 @@
           document.getElementById('ro-tmp-loading').innerHTML = "";
           var iframe = document.getElementById('ro-tmp-preview');
           iframe.removeAttribute('srcdoc'); // Clear any lingering HTML data
-          iframe.src = docUrl; // Load the Google Doc URL
+          iframe.src = docUrl;
+          // Load the Google Doc URL
           
         } else {
           // It's an Email or Notification, fetch the rendered HTML layout
@@ -512,14 +505,11 @@
   function promptTestEmail() {
     // 1. Trigger the native browser prompt
     var targetEmail = prompt("Where should we send the test email?", "yourname@example.com");
-    
     // 2. If they hit cancel or leave it blank, do nothing
     if (!targetEmail || targetEmail.trim() === "") return;
-    
     // 3. Fire the backend sender
     var rowIndex = document.getElementById('ro-tmp-rowIndex').value;
     document.getElementById('ro-tmp-loading').innerHTML = "Sending test...";
-    
     google.script.run
       .withSuccessHandler(function(res) {
         document.getElementById('ro-tmp-loading').innerHTML = "";
@@ -540,7 +530,6 @@
       var triggerSelect = document.getElementById(mode + '-trigger');
       
       if (!moduleElement || !typeElement || !triggerSelect) return;
-
       var moduleSelect = moduleElement.value.trim().toLowerCase();
       var typeSelect = typeElement.value.trim().toLowerCase(); 
       
@@ -550,7 +539,6 @@
         "clients": ["New Client Welcome", "New Client Announcement", "Client Updated", "Client Inactive"],
         "users": ["New User Added", "User Updated", "User Inactive"]
       };
-      
       var options = baseTriggers[moduleSelect] || [];
       
       var currentRowIndex = -1;
@@ -574,7 +562,6 @@
       }).map(function(t) {
         return (t.triggerEvent || t.trigger || "").trim().toLowerCase();
       });
-
       triggerSelect.innerHTML = '';
       var safeTriggerToSelect = (triggerToSelect || "").trim().toLowerCase();
       
@@ -590,12 +577,10 @@
         opt.text = trigger;
         triggerSelect.appendChild(opt);
       });
-
       if (triggerToSelect) {
         var exists = Array.from(triggerSelect.options).some(function(opt) { 
           return opt.value === triggerToSelect; 
         });
-        
         if (!exists) {
           var forcedOpt = document.createElement('option');
           forcedOpt.value = triggerToSelect;
@@ -613,7 +598,6 @@
   function openAddTemplateForm() {
     // 1. Switch to the Add view
     switchView('addTemplateView');
-
     // 2. Clear out all the text inputs and reset dropdowns to defaults
     document.getElementById('add-name').value = '';
     document.getElementById('add-type').value = 'Email';
@@ -621,16 +605,14 @@
     document.getElementById('add-status').value = 'Active';
     document.getElementById('add-wrapper').value = 'Internal';
     document.getElementById('add-subject').value = '';
-    
     // 3. Update the trigger options based on the default module (Clients)
     updateTriggerOptions('add');
-
     // 4. Clear both the Rich Text and Source Code editors
     if (typeof addQuill !== 'undefined') {
-      addQuill.setContents([]); // Empties the rich text editor
+      addQuill.setContents([]);
+    // Empties the rich text editor
     }
     document.getElementById('add-source-editor').value = '';
-
     // 5. Ensure the UI defaults back to the Rich Text view
     toggleEditor('add', 'rich');
   }
@@ -659,7 +641,6 @@
       status: document.getElementById('tmp-status').value,
       wrapperType: document.getElementById('tmp-wrapper').value // <--- ADD THIS
     };
-
     google.script.run.withSuccessHandler(res => {
       document.getElementById('add-tmp-status').innerHTML = res;
       document.getElementById('tmp-submit').disabled = false;
@@ -671,7 +652,6 @@
     switchView('editTemplateView');
     var statusEl = document.getElementById('edt-tmp-status');
     if (statusEl) statusEl.innerHTML = "Loading...";
-    
     google.script.run.withSuccessHandler(function(data) {
       if (!data) return;
       if (statusEl) statusEl.innerHTML = "";
@@ -705,7 +685,6 @@
         
         // Recalculate and inject the saved trigger
         updateTriggerOptions('edt', data.triggerEvent);
-        
         var statusDropdown = document.getElementById('edt-status');
         if (statusDropdown) statusDropdown.value = data.status || "Active";
         
@@ -714,7 +693,6 @@
         
         var subjectInput = document.getElementById('edt-subject');
         if (subjectInput) subjectInput.value = data.subject || "";
-        
         var safeContent = data.bodyContent || "";
         if (data.type === 'Document') {
           var docUrlInput = document.getElementById('edt-doc-url');
@@ -728,8 +706,7 @@
         }
         
         toggleTemplateType('edt');
-        toggleEditor('edit', 'rich'); 
-        
+        toggleEditor('edit', 'rich');
       } catch (err) {
         console.error("Error populating Edit form:", err);
       }
@@ -744,7 +721,6 @@
 
     var type = document.getElementById('add-type').value;
     var finalBodyContent = "";
-    
     if (type === 'Document') {
       finalBodyContent = document.getElementById('add-doc-url').value;
     } else {
@@ -762,7 +738,6 @@
       status: document.getElementById('edt-status').value,
       wrapperType: document.getElementById('edt-wrapper').value // <-- MAKE SURE THIS IS HERE
     };
-
     google.script.run.withSuccessHandler(res => {
       document.getElementById('edt-tmp-status').innerHTML = res;
       document.getElementById('edt-submit').disabled = false;

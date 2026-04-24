@@ -1,4 +1,4 @@
-function getClients() {
+function getClientsList() {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     var data = sheet.getDataRange().getValues();
@@ -10,7 +10,7 @@ function getClients() {
       if (!row[1]) continue; 
       
       clients.push({
-        rowIndex: i, // THIS is critical for the Edit button to work
+        rowIndex: i, 
         companyName: row[1],
         brandName: row[2],
         website: row[4],
@@ -19,12 +19,13 @@ function getClients() {
         pEmail: row[8],
         pPhone: row[9],
         services: row[17], 
-        status: row[29]    
+        status: row[29],
+        acctMgr: row[30] // <--- THIS WAS THE MISSING PIECE
       });
     }
     return clients;
   } catch(e) { 
-    return []; 
+    return [];
   }
 }
 
@@ -35,12 +36,11 @@ function getClientById(rowIndex) {
     
     var data = sheet.getDataRange().getValues();
     var idx = parseInt(rowIndex, 10);
-    
     if (isNaN(idx)) return { error: "Row index is invalid or undefined: " + rowIndex };
     
     var row = data[idx];
     if (!row) return { error: "Row " + idx + " is completely empty in the spreadsheet." };
-    
+
     // CRITICAL FIX: Formats raw Dates to strings so Google Apps Script doesn't crash and return 'null'
     function safeVal(val) {
       if (val instanceof Date) return val.toISOString();
@@ -63,14 +63,14 @@ function getClientById(rowIndex) {
   }
 }
 
-function saveClient(clientData) { // Note: Swapped name to saveClient to match HTML call
+function processNewClient(clientData) {
   try {
     // 1. Save Data to Database
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
-    
+
     // Create an empty array for all 34 columns
-    var newRow = new Array(34).fill(""); 
-    
+    var newRow = new Array(34).fill("");
+
     newRow[0] = new Date(); // Timestamp
     newRow[1] = clientData.companyName;
     newRow[2] = clientData.brandName;
@@ -125,7 +125,7 @@ function saveClient(clientData) { // Note: Swapped name to saveClient to match H
 
     return "Success! Client onboarded successfully.";
   } catch (error) { 
-    return "Error: " + error.toString(); 
+    return "Error: " + error.toString();
   }
 }
 
@@ -138,7 +138,7 @@ const COL_MAP = {
   remarks: 32, history: 33
 };
 
-function updateClient(clientData) {
+function updateClientRecord(clientData) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     var data = sheet.getDataRange().getValues();
@@ -177,7 +177,7 @@ function updateClient(clientData) {
     newRow[24] = clientData.commBasis;
     newRow[25] = clientData.ppcDate;
     newRow[26] = clientData.dspDate;
-    
+
     newRow[27] = clientData.salesNotes;
     newRow[28] = clientData.brandCode;
     newRow[29] = clientData.status;
@@ -187,6 +187,7 @@ function updateClient(clientData) {
 
     // === AUTO-HISTORY GENERATOR ===
     var changes = [];
+
     for (var i = 1; i <= 32; i++) { // Check cols 1 through 32 for changes
       var oldVal = String(oldRow[i] || "").trim();
       var newVal = String(newRow[i] || "").trim();

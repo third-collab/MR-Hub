@@ -128,46 +128,45 @@
     thead th { background-color: var(--brand-offwhite); color: var(--brand-grey); padding: 15px; font-weight: 700; border-bottom: 2px solid #E3E3E3; }
     tbody td { padding: 15px; border-bottom: 1px solid #E3E3E3; color: var(--brand-grey); }
     tbody tr:hover { background-color: var(--brand-offwhite); }
-    /* --- STATUS BADGES & GRADIENTS --- */
+    /* --- STATUS BADGES (Harmonized Mid-Tones) --- */
     .badge { 
       padding: 6px 14px; 
       border-radius: 20px; 
       font-size: 12px; 
       font-weight: 700; 
-      color: var(--brand-grey); 
       display: inline-block;
       text-align: center;
-      /* Default fallback styling */
-      background: #E3E3E3; 
-      border: 1px solid #ccc;
+      background-color: #E3E3E3; 
+      color: var(--brand-grey); 
+      border: 1px solid transparent;
     }
     
     .badge-active {
-      /* Soft vibrant green gradient */
-      background: linear-gradient(135deg, #d4fc79 0%, #96e6a1 100%);
-      color: #1a5621;
-      border: 1px solid #84d690;
+      /* Darkened slightly from the previous super-light version */
+      background-color: #D1E7DD; 
+      color: #0F5132;
+      border-color: #BADBCC;
     }
     
     .badge-inactive {
-      /* Darker grey gradient */
-      background: linear-gradient(135deg, #e0e0e0 0%, #b8b8b8 100%);
-      color: #4a4a4a;
-      border: 1px solid #a3a3a3;
+      /* Softened from the heavy brand-red to match the pastel spectrum */
+      background-color: #F8D7DA; 
+      color: #842029;
+      border-color: #F5C2C7;
     }
     
     .badge-onboarding {
-      /* Matching your --brand-yellow */
-      background: linear-gradient(135deg, #ffe98a 0%, #FDDD64 100%);
-      color: #6b5c17;
-      border: 1px solid #ecd15a;
+      /* Softened from the heavy brand-yellow */
+      background-color: #FFF3CD; 
+      color: #664D03;
+      border-color: #FFECB5;
     }
     
     .badge-paused {
-      /* Light airy grey/blue gradient */
-      background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-      color: #6c757d;
-      border: 1px solid #d1d4d6;
+      /* Darkened slightly to hold its own against the other colors */
+      background-color: #E2E3E5; 
+      color: #41464B;
+      border-color: #D3D6D8;
     }
     .btn-edit { background: none; border: 1px solid var(--brand-grey); color: var(--brand-grey); padding: 6px 12px; border-radius: var(--border-radius-small); cursor: pointer; font-size: 13px; font-weight: bold; transition: all 0.2s; }
     .btn-edit:hover { background-color: var(--brand-grey); color: var(--brand-white); }
@@ -469,10 +468,10 @@
       
       // --- CLIENTS ---
       if (viewId === 'clientListView') {
-        // Note: Checking for both possible table body IDs just in case
         var clientBody = document.getElementById('clientTableBody') || document.getElementById('client-list-body');
-        if (clientBody) clientBody.innerHTML = '<tr><td colspan="8" style="text-align:center; padding: 30px;">Loading data...</td></tr>';
-        google.script.run.withSuccessHandler(populateTable).getClients();
+        if (clientBody) clientBody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">Loading data...</td></tr>';
+        
+        google.script.run.withSuccessHandler(populateClientsTable).getClientsList();
       }
       
       if (viewId === 'addClientView') { // Updated from onboardingView

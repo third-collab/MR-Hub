@@ -12,7 +12,7 @@
       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
       Filters
     </button>
-    
+  
     <div id="user-adv" class="filter-advanced">
       <div class="custom-dropdown">
         <button class="dropdown-btn" onclick="toggleDropdown('user-status-drop')">Status ▼</button>
@@ -243,7 +243,6 @@
 
       return matchesSearch && matchesStatus;
     });
-
     filteredData.sort(function(a, b) {
       var valA = a[CURRENT_USER_SORT_COLUMN] || '';
       var valB = b[CURRENT_USER_SORT_COLUMN] || '';
@@ -255,7 +254,6 @@
       if (valA > valB) return CURRENT_USER_SORT_DESC ? -1 : 1;
       return 0;
     });
-
     document.querySelectorAll('.sort-icon').forEach(icon => { if(icon.id.startsWith('usort-')) icon.innerHTML = ''; });
     var iconEl = document.getElementById('usort-' + CURRENT_USER_SORT_COLUMN);
     if (iconEl) { iconEl.innerHTML = CURRENT_USER_SORT_DESC ? '▼' : '▲'; }
@@ -265,10 +263,9 @@
 
   function renderUserTableRows(users) {
     var tbody = document.getElementById('userTableBody');
-    tbody.innerHTML = ''; 
-    
+    tbody.innerHTML = '';
     if (users.length === 0) { 
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No users found.</td></tr>'; 
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No users found.</td></tr>';
       return; 
     }
     
@@ -278,7 +275,7 @@
       
       tr.onclick = function(e) { 
         if (!e.target.closest('.btn-edit')) {
-          viewUser(user.rowIndex); 
+          openReadOnlyUser(user.rowIndex); 
         }
       };
 
@@ -317,23 +314,19 @@
     return [year, month, day].join('-');
   }
 
-  
-
   // --- Helper to handle File Upload ---
-  
   function uploadFile(inputId, callback, statusId, btnId) {
     var fileInput = document.getElementById(inputId);
     if (!fileInput || fileInput.files.length === 0) { 
       callback(""); 
-      return; 
+      return;
     }
     
     var file = fileInput.files[0];
     var statusEl = document.getElementById(statusId);
     var btnEl = document.getElementById(btnId);
-
     // SAFETY CHECK: Prevent silent crashing by blocking files larger than 3MB
-    var maxSizeInBytes = 3 * 1024 * 1024; 
+    var maxSizeInBytes = 3 * 1024 * 1024;
     if (file.size > maxSizeInBytes) {
       statusEl.innerHTML = "Error: Photo is too large. Please use an image under 3MB.";
       statusEl.style.color = "var(--brand-red)";
@@ -344,7 +337,6 @@
     var reader = new FileReader();
     reader.onload = function(e) {
       var content = e.target.result.split(',')[1];
-      
       google.script.run
         .withSuccessHandler(function(res) {
           // If the backend DriveApp failed but caught the error
@@ -370,11 +362,10 @@
 
   // --- EDIT USER LOGIC ---
   function openEditUserForm(rowIndex) {
-    switchView('editUserView'); 
+    switchView('editUserView');
     var statusMsg = document.getElementById('edit-user-status');
     statusMsg.innerHTML = "Loading profile...";
     statusMsg.style.color = "var(--brand-grey)";
-    
     google.script.run
       .withSuccessHandler(function(data) {
         if (data.error) {
@@ -401,17 +392,16 @@
           document.getElementById('edu-phone').value = data.phone || "";
           document.getElementById('edu-address').value = data.address || "";
           document.getElementById('edu-facebookUrl').value = data.facebookUrl || "";
-          
           // Photo
           document.getElementById('editUserForm').dataset.existingPhoto = data.profilePhotoUrl || "";
-          document.getElementById('edu-photoInput').value = ""; // Clear file input
+          document.getElementById('edu-photoInput').value = "";
+          // Clear file input
           
           // Employment
           document.getElementById('edu-position').value = data.position || "";
           document.getElementById('edu-status').value = data.status || "Active";
           document.getElementById('edu-empType').value = data.employmentType || "Full Time";
           document.getElementById('edu-dateHired').value = formatDateForInput(data.dateHired);
-          
         } catch (err) {
           statusMsg.innerHTML = "Frontend Mapping Error: " + err.message;
           statusMsg.style.color = "var(--brand-red)";
@@ -436,7 +426,6 @@
     document.getElementById('add-user-status').innerHTML = "Processing..."; 
     document.getElementById('add-user-status').style.color = "var(--brand-grey)";
     document.getElementById('usr-submit').disabled = true;
-
     // Notice we now pass the status ID and button ID to the upload function
     uploadFile('usr-photoInput', function(photoUrl) {
       var obj = {
@@ -456,7 +445,6 @@
         employmentType: document.getElementById('usr-empType').value,
         dateHired: document.getElementById('usr-dateHired').value
       };
-
       google.script.run
         .withSuccessHandler(res => {
           document.getElementById('add-user-status').innerHTML = res;
@@ -492,7 +480,7 @@
       // Pass IDs for error unlocking
       uploadFile('edu-photoInput', function(url) {
         sendEditData(url);
-      }, 'edit-user-status', 'edu-submit'); 
+      }, 'edit-user-status', 'edu-submit');
     } else {
       var existingUrl = document.getElementById('editUserForm').dataset.existingPhoto || "";
       sendEditData(existingUrl);
@@ -518,7 +506,6 @@
       employmentType: document.getElementById('edu-empType').value,
       dateHired: document.getElementById('edu-dateHired').value
     };
-
     google.script.run
       .withSuccessHandler(res => {
         document.getElementById('edit-user-status').innerHTML = res; 
@@ -535,7 +522,7 @@
   }
 
   // --- View Read-Only User ---
-  function viewUser(rowIndex) {
+  function openReadOnlyUser(rowIndex) {
     switchView('readOnlyUserView');
     document.getElementById('rou-fullName').innerHTML = "Loading...";
     document.getElementById('rou-edit-btn').setAttribute('onclick', 'openEditUserForm(' + rowIndex + ')');
@@ -570,7 +557,6 @@
       var statusEl = document.getElementById('rou-status');
       statusEl.innerHTML = data.status || "N/A";
       statusEl.style.backgroundColor = (data.status === 'Active') ? 'var(--brand-yellow)' : '#ccc';
-
       // Data Fields
       var workEmailEl = document.getElementById('rou-workEmail');
       workEmailEl.innerHTML = data.workEmail || "N/A";
