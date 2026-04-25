@@ -1,7 +1,122 @@
 /**
+ * Helper to deep-diff two JSON arrays and return human-readable field-level changes.
+ * This correctly tracks exact edits to Phone, Email, Name, Address, etc., 
+ * and handles drag/drop reorders silently.
+ */
+function diffJson(oldJson, newJson, headerName, type) {
+  var oldArr = [];
+  var newArr = [];
+  try { oldArr = JSON.parse(oldJson || "[]"); } catch(e){}
+  try { newArr = JSON.parse(newJson || "[]"); } catch(e){}
+  
+  var changes = [];
+
+  var fieldLabels = {
+    firstName: "First Name", lastName: "Last Name", email: "Email", phone: "Phone", 
+    position: "Position", birthday: "Birthday", address: "Address",
+    contactName: "Contact Name", street: "Street", city: "City", state: "State", 
+    countryCode: "Country Code", remarks: "Remarks", content: "Content"
+  };
+
+  // Helper to establish the identifying "name" for the audit log subject
+  function getItemName(item) {
+    if (type === 'contacts') return [item.firstName, item.lastName].filter(Boolean).join(" ") || "Contact";
+    if (type === 'addresses') return item.contactName || "Address";
+    if (type === 'opnotes') return item.content ? (item.content.substring(0, 30) + "...") : "Note";
+    return "Item";
+  }
+
+  // Deep comparison ignoring metadata keys (editor, timestamp)
+  function isExactMatch(o, n) {
+    var allKeys = [];
+    Object.keys(o).concat(Object.keys(n)).forEach(function(k) {
+      if (k !== 'editor' && k !== 'timestamp' && allKeys.indexOf(k) === -1) allKeys.push(k);
+    });
+    for (var i = 0; i < allKeys.length; i++) {
+      var oVal = String(o[allKeys[i]] || "").trim();
+      var nVal = String(n[allKeys[i]] || "").trim();
+      if (oVal !== nVal) return false;
+    }
+    return true;
+  }
+
+  var unmatchedOld = [];
+  var unmatchedNew = [...newArr];
+
+  // 1. Find exact matches first (This allows drag/drop reorders to be silently ignored)
+  for (var i = 0; i < oldArr.length; i++) {
+    var o = oldArr[i];
+    var matchIdx = -1;
+    for (var j = 0; j < unmatchedNew.length; j++) {
+      if (isExactMatch(o, unmatchedNew[j])) {
+        matchIdx = j;
+        break;
+      }
+    }
+    if (matchIdx > -1) {
+      unmatchedNew.splice(matchIdx, 1); // remove identical matched item
+    } else {
+      unmatchedOld.push(o);
+    }
+  }
+
+  // 2. Process remaining unmatched items (Tracks in-place edits and additions/removals)
+  var maxLen = Math.max(unmatchedOld.length, unmatchedNew.length);
+  for (var i = 0; i < maxLen; i++) {
+    var o = unmatchedOld[i];
+    var n = unmatchedNew[i];
+    
+    // Operational Notes Logic
+    if (type === 'opnotes') {
+      if (o && !n) changes.push({ field: headerName, old: o.content, new: "Removed" });
+      else if (!o && n) changes.push({ field: headerName, old: "", new: "Added: " + n.content });
+      else if (o && n && o.content !== n.content) {
+         changes.push({ field: headerName + " (Content)", old: o.content, new: n.content });
+      }
+      continue;
+    }
+
+    // Dynamic Context Name (e.g., "Shipping Addresses - Paul Luz")
+    var name = n ? getItemName(n) : getItemName(o);
+    var itemContext = headerName + " - " + name;
+
+    if (o && !n) {
+      // Entire block was deleted
+      changes.push({ field: itemContext, old: "Present", new: "Removed" });
+    } else if (!o && n) {
+      // Completely new block was added
+      changes.push({ field: itemContext, old: "None", new: "Added" });
+    } else if (o && n) {
+      // Existing block was edited. Diff properties cleanly.
+      var uProps = [];
+      Object.keys(o).concat(Object.keys(n)).forEach(function(p) {
+        if(uProps.indexOf(p) === -1) uProps.push(p);
+      });
+      
+      uProps.forEach(function(prop) {
+        if (prop === 'editor' || prop === 'timestamp') return; // Skip metadata
+        var oVal = String(o[prop] || "").trim();
+        var nVal = String(n[prop] || "").trim();
+        
+        if (oVal !== nVal) {
+          var label = fieldLabels[prop] || prop;
+          changes.push({ 
+            field: itemContext + " (" + label + ")", 
+            old: oVal, 
+            new: nVal 
+          });
+        }
+      });
+    }
+  }
+  return changes;
+}
+
+/**
  * Fetches the summarized list of clients for the main table view.
- * Blueprint: Fetches essential columns including Account Manager for display.
- * @return {Array<Object>} List of client objects.
+ * Standardizes data for the frontend to include identifying indexes and 
+ * Account Manager details.
+ * * @return {Array<Object>} List of client objects with essential display fields.
  */
 function getClientsList() {
   try {
@@ -23,8 +138,8 @@ function getClientsList() {
         pEmail: row[8],
         pPhone: row[9],
         services: row[17], 
-        status: row[29],
-        acctMgr: row[30] // Optimized: Ensures AM appears in list view
+        status: row[34], 
+        acctMgr: row[35] 
       });
     }
     return clients;
@@ -34,10 +149,10 @@ function getClientsList() {
 }
 
 /**
- * Fetches a detailed client record by its spreadsheet row index.
- * Blueprint: Sanitizes Date objects for safe frontend transport.
- * @param {number} rowIndex - The index of the row in the sheet.
- * @return {Object} The detailed client data or error object.
+ * Fetches all details for a specific client by their spreadsheet row index.
+ * Sanitizes raw Date objects to ISO strings to prevent data transport errors.
+ * * @param {number} rowIndex The row index in the spreadsheet.
+ * @return {Object} Detailed client record or error object.
  */
 function getClientById(rowIndex) {
   try {
@@ -46,26 +161,58 @@ function getClientById(rowIndex) {
     
     var data = sheet.getDataRange().getValues();
     var idx = parseInt(rowIndex, 10);
-    if (isNaN(idx)) return { error: "Invalid Row index: " + rowIndex };
+    if (isNaN(idx)) return { error: "Row index is invalid or undefined: " + rowIndex };
     
     var row = data[idx];
-    if (!row) return { error: "Empty row at index " + idx };
+    if (!row) return { error: "Row " + idx + " is completely empty in the spreadsheet." };
+
+    var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
 
     function safeVal(val) {
-      if (val instanceof Date) return val.toISOString();
+      if (val instanceof Date) return Utilities.formatDate(val, tz, "yyyy-MM-dd");
       return val === undefined ? "" : val;
     }
     
     return {
       rowIndex: idx,
-      companyName: safeVal(row[1]), brandName: safeVal(row[2]), address: safeVal(row[3]), website: safeVal(row[4]), anniversary: safeVal(row[5]),
-      pFirstName: safeVal(row[6]), pLastName: safeVal(row[7]), pEmail: safeVal(row[8]), pPhone: safeVal(row[9]), pAddress: safeVal(row[10]), 
-      pBirthday: safeVal(row[11]), pPosition: safeVal(row[12]), addContacts: safeVal(row[13]), shipAddress: safeVal(row[14]), 
-      retAddress: safeVal(row[15]), brandReg: safeVal(row[16]), services: safeVal(row[17]), monthlyVal: safeVal(row[18]),
-      startDate: safeVal(row[19]), termCount: safeVal(row[20]), termUnit: safeVal(row[21]), expDate: safeVal(row[22]), 
-      commRate: safeVal(row[23]), commBasis: safeVal(row[24]), ppcDate: safeVal(row[25]), dspDate: safeVal(row[26]), 
-      salesNotes: safeVal(row[27]), brandCode: safeVal(row[28]), status: safeVal(row[29]) || "Active", acctMgr: safeVal(row[30]), 
-      brandFolder: safeVal(row[31]), remarks: safeVal(row[32]), history: safeVal(row[33])
+      companyName: safeVal(row[1]), 
+      brandName: safeVal(row[2]), 
+      address: safeVal(row[3]), 
+      website: safeVal(row[4]), 
+      anniversary: safeVal(row[5]),
+      pFirstName: safeVal(row[6]), 
+      pLastName: safeVal(row[7]), 
+      pEmail: safeVal(row[8]), 
+      pPhone: safeVal(row[9]), 
+      pAddress: safeVal(row[10]), 
+      pBirthday: safeVal(row[11]), 
+      pPosition: safeVal(row[12]), 
+      addContacts: safeVal(row[13]), 
+      shipAddress: safeVal(row[14]), 
+      retAddress: safeVal(row[15]), 
+      brandReg: safeVal(row[16]), 
+      services: safeVal(row[17]), 
+      monthlyVal: safeVal(row[18]),
+      origStartDate: safeVal(row[19]),
+      currentStartDate: safeVal(row[20]),
+      termCount: safeVal(row[21]),
+      termUnit: safeVal(row[22]),
+      origExpDate: safeVal(row[23]),
+      currentExpDate: safeVal(row[24]),
+      origEndDate: safeVal(row[25]),
+      latestEndDate: safeVal(row[26]),
+      commRate: safeVal(row[27]),
+      commBasis: safeVal(row[28]),
+      ppcDate: safeVal(row[29]),
+      dspDate: safeVal(row[30]),
+      handoverNotes: safeVal(row[31]),    
+      operationalNotes: safeVal(row[32]), 
+      brandCode: safeVal(row[33]),
+      status: safeVal(row[34]) || "Active",
+      acctMgr: safeVal(row[35]),
+      brandFolder: safeVal(row[36]),
+      remarks: safeVal(row[37]),
+      history: safeVal(row[38])           
     };
   } catch(e) {
     return { error: "Backend crash: " + e.message };
@@ -73,17 +220,16 @@ function getClientById(rowIndex) {
 }
 
 /**
- * Appends a new client record and triggers onboarding automations.
- * Blueprint Checkpoint: Triggers 'Client Welcome Email' and 'New Client Announcement'.
- * @param {Object} clientData - Data from the Add Client form.
- * @return {string} Success or Error message.
+ * Creates a new client record and triggers automated onboarding notifications.
+ * * @param {Object} clientData The data object collected from the Add Client form.
+ * @return {string} Confirmation or error message.
  */
 function processNewClient(clientData) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
-    var newRow = new Array(34).fill("");
+    var newRow = new Array(39).fill("");
 
-    newRow[0] = new Date(); // Timestamp
+    newRow[0] = new Date(); 
     newRow[1] = clientData.companyName;
     newRow[2] = clientData.brandName;
     newRow[3] = clientData.address;
@@ -95,35 +241,47 @@ function processNewClient(clientData) {
     newRow[10] = clientData.pAddress;
     newRow[11] = clientData.pBirthday;
     newRow[12] = clientData.pPosition;
-    newRow[13] = clientData.addContacts; // JSON string
+    newRow[13] = clientData.addContacts; 
+    newRow[16] = clientData.brandReg; 
     newRow[17] = clientData.services;
     newRow[18] = clientData.monthlyVal;
-    newRow[19] = clientData.startDate;
-    newRow[27] = clientData.salesNotes; 
-    newRow[29] = "Onboarding";
-    newRow[30] = "Unassigned";
+    
+    newRow[19] = clientData.startDate; 
+    newRow[20] = clientData.startDate; 
+    newRow[21] = clientData.termCount; 
+    newRow[22] = clientData.termUnit;  
+    newRow[23] = clientData.expDate;   
+    newRow[24] = clientData.expDate;   
+    
+    newRow[31] = clientData.handoverNotes; 
+    newRow[34] = "Onboarding"; 
+    newRow[35] = "Unassigned"; 
 
     sheet.appendRow(newRow);
 
-    // Automation Checkpoint: Email Triggers
+    var priContactFull = clientData.pFirstName + " " + clientData.pLastName;
     try {
       var clientDataMap = {
         "companyName": clientData.companyName || "",
         "brandName": clientData.brandName || "",
         "priFirstName": clientData.pFirstName || "",
+        "priContactFull": priContactFull || "",
         "priEmail": clientData.pEmail || "",
         "services": clientData.services || "",
         "monthlyContractValue": clientData.monthlyVal || "",
         "contractStartDate": clientData.startDate || "",
-        "notes": clientData.salesNotes || ""
+        "notes": clientData.handoverNotes || ""
       };
+
       if (clientData.pEmail && typeof sendTriggerEmail === "function") {
         sendTriggerEmail("Client Welcome Email", clientData.pEmail, clientDataMap);
       }
       if (typeof sendTriggerEmail === "function") {
         sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
       }
-    } catch(e) { console.error("Email Triggers failed: " + e.message); }
+    } catch(e) {
+      return "Success! Client onboarded, but automated emails failed: " + e.message;
+    }
 
     return "Success! Client onboarded successfully.";
   } catch (error) { 
@@ -132,51 +290,109 @@ function processNewClient(clientData) {
 }
 
 /**
- * Updates an existing client and generates an auto-history log cell.
- * @param {Object} clientData - Updated fields from the Edit Client form.
- * @return {string} Success or Error message.
+ * Updates an existing client record and generates an automated history log of changes.
+ * * @param {Object} clientData The updated client object including the rowIndex.
+ * @return {string} Confirmation or error message.
  */
 function updateClientRecord(clientData) {
   try {
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
+    var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var rowIndex = parseInt(clientData.rowIndex, 10); 
     var oldRow = data[rowIndex]; 
-    var newRow = [...oldRow]; 
     
-    // Map fields [cite: 318-323]
-    newRow[1] = clientData.companyName; newRow[2] = clientData.brandName;
-    newRow[3] = clientData.address; newRow[4] = clientData.website;
-    newRow[5] = clientData.anniversary; newRow[6] = clientData.pFirstName;
-    newRow[7] = clientData.pLastName; newRow[8] = clientData.pEmail;
-    newRow[9] = clientData.pPhone; newRow[10] = clientData.pAddress;
-    newRow[11] = clientData.pBirthday; newRow[12] = clientData.pPosition;
-    newRow[13] = clientData.addContacts; newRow[14] = clientData.shipAddress;
-    newRow[15] = clientData.retAddress; newRow[16] = clientData.brandReg;
-    newRow[18] = clientData.monthlyVal; newRow[19] = clientData.startDate;
-    newRow[20] = clientData.termCount; newRow[21] = clientData.termUnit;
-    newRow[22] = clientData.expDate; newRow[23] = clientData.commRate;
-    newRow[24] = clientData.commBasis; newRow[25] = clientData.ppcDate;
-    newRow[26] = clientData.dspDate; newRow[27] = clientData.salesNotes;
-    newRow[28] = clientData.brandCode; newRow[29] = clientData.status;
-    newRow[30] = clientData.acctMgr; newRow[31] = clientData.brandFolder;
-    newRow[32] = clientData.remarks;
+    var newRow = [...oldRow]; 
+    while(newRow.length < 39) { newRow.push(""); } 
 
-    // Blueprint Checkpoint: Auto-History Generator 
+    newRow[1] = clientData.companyName;
+    newRow[2] = clientData.brandName;
+    newRow[3] = clientData.address;
+    newRow[4] = clientData.website;
+    newRow[5] = clientData.anniversary;
+    newRow[6] = clientData.pFirstName;
+    newRow[7] = clientData.pLastName;
+    newRow[8] = clientData.pEmail;
+    newRow[9] = clientData.pPhone;
+    newRow[10] = clientData.pAddress;
+    newRow[11] = clientData.pBirthday;
+    newRow[12] = clientData.pPosition;
+    newRow[13] = clientData.addContacts;
+    newRow[14] = clientData.shipAddress;
+    newRow[15] = clientData.retAddress;
+    newRow[16] = clientData.brandReg;
+    newRow[17] = clientData.services; 
+    newRow[18] = clientData.monthlyVal;
+
+    newRow[19] = oldRow[19]; 
+    newRow[20] = clientData.currentStartDate; 
+    newRow[21] = clientData.termCount;
+    newRow[22] = clientData.termUnit;
+    newRow[23] = oldRow[23]; 
+    newRow[24] = clientData.currentExpDate;   
+
+    var origEndRaw = oldRow[25]; 
+    if (!origEndRaw || String(origEndRaw).trim() === "") {
+      newRow[25] = clientData.endDate;
+      newRow[26] = clientData.endDate;
+    } else {
+      newRow[25] = oldRow[25]; 
+      newRow[26] = clientData.endDate;
+    }
+
+    newRow[27] = clientData.commRate;
+    newRow[28] = clientData.commBasis;
+    newRow[29] = clientData.ppcDate;
+    newRow[30] = clientData.dspDate;
+    newRow[31] = clientData.handoverNotes;     
+    newRow[32] = clientData.operationalNotes;  
+    newRow[33] = clientData.brandCode;         
+    newRow[34] = clientData.status;            
+    newRow[35] = clientData.acctMgr;           
+    newRow[36] = clientData.brandFolder;       
+    newRow[37] = clientData.remarks;           
+
+    // Map which columns are JSON to trigger the deep field-level diff engine
+    var jsonColumnsMap = {
+      13: 'contacts',
+      14: 'addresses',
+      15: 'addresses',
+      32: 'opnotes'
+    };
+
     var changes = [];
-    for (var i = 1; i <= 32; i++) { 
-      var oldVal = String(oldRow[i] || "").trim();
-      var newVal = String(newRow[i] || "").trim();
+    for (var i = 1; i <= 37; i++) { 
+      var oldValRaw = oldRow[i];
+      var newValRaw = newRow[i];
+      
+      var oldVal = (oldValRaw instanceof Date) ? Utilities.formatDate(oldValRaw, tz, "yyyy-MM-dd") : String(oldValRaw || "").trim();
+      var newVal = (newValRaw instanceof Date) ? Utilities.formatDate(newValRaw, tz, "yyyy-MM-dd") : String(newValRaw || "").trim();
+      
       if (oldVal !== newVal) {
-        changes.push({ field: headers[i], old: oldVal, new: newVal });
+        var headerName = headers[i] || "Column " + (i+1);
+        
+        if (jsonColumnsMap[i]) {
+          // If it's a JSON column, process deep field-level edits using our engine
+          var jChanges = diffJson(oldVal, newVal, headerName, jsonColumnsMap[i]);
+          changes = changes.concat(jChanges);
+        } else {
+          // Standard text column comparison
+          changes.push({ field: headerName, old: oldVal, new: newVal });
+        }
       }
     }
+
     if (changes.length > 0) {
       var historyArray = [];
-      try { if (oldRow[33]) historyArray = JSON.parse(oldRow[33]); } catch (e) {} 
-      historyArray.unshift({ timestamp: new Date().toISOString(), changes: changes });
-      newRow[33] = JSON.stringify(historyArray);
+      try { if (oldRow[38]) historyArray = JSON.parse(oldRow[38]); } catch (e) {} 
+      
+      historyArray.unshift({ 
+        timestamp: new Date().toISOString(), 
+        editor: clientData.editor || "Unknown User",
+        changes: changes 
+      });
+      newRow[38] = JSON.stringify(historyArray);
       newRow[0] = new Date(); 
     }
 

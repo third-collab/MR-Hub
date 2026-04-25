@@ -1,20 +1,22 @@
 <div id="notificationsListView" class="view-section" style="display: none;">
-  
   <div style="max-width: 1200px; margin: 0 auto; padding: 20px;">
     
     <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
     
     <div class="view-header-bar" style="margin-bottom: 15px;">
       <h2>Notifications History</h2>
-      <button class="btn-primary" onclick="loadFullNotifications()">&#8635; Refresh Notifications</button>
+      <button class="btn-primary" onclick="loadNotificationsTable()">&#8635; Refresh Notifications</button>
     </div>
 
     <div class="filter-wrapper">
       <input type="text" id="notif-filter-search" class="filter-input" placeholder="Search messages..." onkeyup="applyNotifFilters()">
-      <button class="btn-filter-toggle" onclick="toggleFilter('notif-adv')">Filters</button>
+      
+      <button class="btn-filter-toggle" onclick="toggleFilter('notif-adv')">
+        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        Filters
+      </button>
       
       <div id="notif-adv" class="filter-advanced">
-        
         <div class="custom-dropdown">
           <button class="dropdown-btn" onclick="toggleDropdown('notif-status-drop')">Status ▼</button>
           <div class="dropdown-content" id="notif-status-drop">
@@ -40,20 +42,21 @@
             <label><input type="checkbox" class="notif-filter-cat-cb" value="New User" checked onchange="applyNotifFilters()"> New User</label>
             <label><input type="checkbox" class="notif-filter-cat-cb" value="User Birthday" checked onchange="applyNotifFilters()"> User Birthday</label>
             <label><input type="checkbox" class="notif-filter-cat-cb" value="User Anniversary" checked onchange="applyNotifFilters()"> User Anniversary</label>
+            <label><input type="checkbox" class="notif-filter-cat-cb" value="Client Anniversary" checked onchange="applyNotifFilters()"> Client Anniversary</label>
           </div>
         </div>
       </div>
     </div>
 
-    <div class="card">
-      <table style="width: 100%; border-collapse: collapse; text-align: left;">
+    <div class="table-container">
+      <table>
         <thead>
-          <tr style="background-color: var(--brand-grey); color: white;">
-            <th style="padding: 10px; border-radius: 4px 0 0 4px; width: 50px;">Status</th>
-            <th style="padding: 10px; width: 150px;">Date & Time</th>
-            <th style="padding: 10px; width: 120px;">Module</th>
-            <th style="padding: 10px; width: 150px;">Category</th>
-            <th style="padding: 10px; border-radius: 0 4px 4px 0;">Message</th>
+          <tr>
+            <th style="width: 50px; text-align: center;">Status</th>
+            <th style="width: 150px;">Date & Time</th>
+            <th style="width: 120px;">Module</th>
+            <th style="width: 150px;">Category</th>
+            <th>Message</th>
           </tr>
         </thead>
         <tbody id="fullNotificationsTableBody">
@@ -61,45 +64,69 @@
         </tbody>
       </table>
     </div>
-
-  </div> </div>
+  </div>
+</div>
 
 <script>
+  /** Global dataset for local filtering */
   var GLOBAL_NOTIFS = [];
 
-  function loadFullNotifications() {
+  /**
+   * Fetches the full notification history from the backend.
+   * Standardizes the UI state before rendering results.
+   */
+  function loadNotificationsTable() {
     var tbody = document.getElementById('fullNotificationsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">Loading history...</td></tr>';
     
     google.script.run.withSuccessHandler(function(notifs) {
       GLOBAL_NOTIFS = notifs; 
       applyNotifFilters(); 
-    }).getMyNotifications(150, false); 
+    }).getMyNotifications(150, false); // Fetch last 150 items for history view
   }
 
+  /**
+   * Orchestrates multi-layered filtering for the notification list.
+   * Logic: Search string AND Status AND (Module OR Module) AND (Category OR Category).
+   */
   function applyNotifFilters() {
     var search = document.getElementById('notif-filter-search').value.toLowerCase();
-    var checkedMods = Array.from(document.querySelectorAll('.notif-filter-mod-cb:checked')).map(cb => cb.value);
-    var checkedCats = Array.from(document.querySelectorAll('.notif-filter-cat-cb:checked')).map(cb => cb.value);
+    var checkedMods = Array.from(document.querySelectorAll('.notif-filter-mod-cb:checked')).map(function(cb) { return cb.value; });
+    var checkedCats = Array.from(document.querySelectorAll('.notif-filter-cat-cb:checked')).map(function(cb) { return cb.value; });
+    var statusFilter = document.querySelector('input[name="notif-filter-status"]:checked').value;
 
     var filtered = GLOBAL_NOTIFS.filter(function(n) {
       var matchSearch = (n.message || "").toLowerCase().includes(search);
-      var matchMod = checkedMods.includes((n.module || "").trim());
-      var matchCat = checkedCats.includes((n.category || "").trim());
+      var matchMod = checkedMods.length === 0 || checkedMods.includes((n.module || "").trim());
+      var matchCat = checkedCats.length === 0 || checkedCats.includes((n.category || "").trim());
+      var matchStatus = (statusFilter === "All") || 
+                        (statusFilter === "Unread" && !n.isRead) || 
+                        (statusFilter === "Read" && n.isRead);
       
-      return matchSearch && matchMod && matchCat;
+      return matchSearch && matchMod && matchCat && matchStatus;
     });
 
+    renderNotificationsTableRows(filtered);
+  }
+
+  /**
+   * Renders the filtered notification data into the table body.
+   * Blueprint Standard: Uses harmonized mid-tone status indicators.
+   * @param {Array<Object>} data - The filtered notifications array.
+   */
+  function renderNotificationsTableRows(data) {
     var tbody = document.getElementById('fullNotificationsTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
     
-    if (filtered.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No notifications found matching those filters.</td></tr>';
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding: 20px;">No notifications match your filters.</td></tr>';
       return;
     }
     
-    filtered.forEach(function(n) {
+    data.forEach(function(n) {
       var rowClass = n.isRead ? "" : "full-notif-unread";
+      // Harmonized mid-tone: Red for unread, Grey for read
       var dotColor = n.isRead ? "#ccc" : "var(--brand-red)";
       
       tbody.innerHTML += `
@@ -110,16 +137,19 @@
           <td style="padding: 15px; font-size: 13px; color: #777; white-space: nowrap;">${n.time}</td>
           <td style="padding: 15px; font-size: 13px; font-weight: bold; color: var(--brand-grey);">${n.module}</td>
           <td style="padding: 15px; font-size: 13px; color: #555;">
-            <span style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px;">${n.category}</span>
+            <span class="badge" style="background: #f0f0f0; padding: 4px 8px; border-radius: 4px;">${n.category}</span>
           </td>
-          <td style="padding: 15px; font-size: 14px;">${n.message}</td>
-        </tr>
-      `;
+          <td style="padding: 15px; font-size: 14px; line-height: 1.4;">${n.message}</td>
+        </tr>`;
     });
-    
+
     setupFullNotificationObserver();
   }
 
+  /**
+   * Initializes the IntersectionObserver for the history table.
+   * Automatically marks notifications as read as the user scrolls past them.
+   */
   function setupFullNotificationObserver() {
     var unreadItems = document.querySelectorAll('.full-notif-unread');
     if (unreadItems.length === 0) return;
@@ -130,17 +160,23 @@
           var row = entry.target;
           var rowIndex = row.getAttribute('data-row');
           
+          // Trigger backend update
           google.script.run.markNotificationAsRead(rowIndex);
           
+          // Visual update
           row.classList.remove('full-notif-unread');
-          row.querySelector('.status-dot').style.backgroundColor = '#ccc';
+          var dot = row.querySelector('.status-dot');
+          if (dot) dot.style.backgroundColor = '#ccc';
+          
           obs.unobserve(row);
           
+          // Sync header badge
           var badge = document.getElementById('notif-badge');
           if (badge) {
-            var count = parseInt(badge.innerText) - 1;
-            badge.innerText = count;
-            if (count <= 0) badge.style.display = 'none';
+            var currentCount = parseInt(badge.innerText) || 0;
+            var newCount = currentCount - 1;
+            badge.innerText = newCount;
+            if (newCount <= 0) badge.style.display = 'none';
           }
         }
       });
@@ -149,3 +185,13 @@
     unreadItems.forEach(function(item) { observer.observe(item); });
   }
 </script>
+
+<style>
+  /* Local styling for the notifications history view */
+  .full-notif-unread {
+    background-color: rgba(196, 0, 4, 0.02);
+  }
+  .status-dot {
+    transition: background-color 0.5s ease;
+  }
+</style>

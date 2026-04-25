@@ -1,8 +1,15 @@
+/**
+ * Entry point for the MR Hub Web Application.
+ * Handles role-based access control and prepares the initial UI template with 
+ * necessary global variables.
+ * @return {HtmlService.HtmlOutput} The evaluated HTML template or a security 
+ * interceptor screen.
+ */
 function doGet() {
-  var role = getUserRole();
+  var role = getUserRole(); 
   var faviconUrl = 'https://i.imgur.com/nHCetrv.png';
-  
-  // NEW: Intercept Inactive users before the app even loads
+
+  // SECURITY INTERCEPTOR: Block Inactive users immediately before loading the app
   if (role === 'Inactive') {
     var errorHtml = `
       <!DOCTYPE html>
@@ -31,10 +38,10 @@ function doGet() {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  // Normal app load for active users
+  // APP INITIALIZATION: Pass server-side variables to the frontend template
   var template = HtmlService.createTemplateFromFile('Index');
   template.userRole = role; 
-  template.accountManagers = JSON.stringify(getAccountManagers()); 
+  template.accountManagers = JSON.stringify(getAccountManagers());
   template.username = getLoggedInUsername();
   
   return template.evaluate()
@@ -43,6 +50,12 @@ function doGet() {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
 
+/**
+ * Server-side helper to include separate HTML files into the master template.
+ * This allows for a modular code structure while maintaining a single-page app.
+ * @param {string} filename - The name of the HTML file to include.
+ * @return {string} The raw HTML content of the file.
+ */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }

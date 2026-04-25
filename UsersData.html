@@ -1,19 +1,15 @@
 <div id="usersListView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
   
-  <div class="view-header-bar" style="margin-bottom: 15px;">
+  <div class="view-header-bar" style="margin-bottom: 20px;">
     <h2>User Management</h2>
-    <button class="btn-primary" onclick="switchView('addUserView')">+ New User</button>
+    <button class="btn-primary" onclick="openAddUserForm()">+ Add User</button>
   </div>
 
   <div class="filter-wrapper">
-    <input type="text" id="user-filter-search" class="filter-input" placeholder="Search by Username, Name, or Email..." onkeyup="applyUserFilters()">
-    <button class="btn-filter-toggle" onclick="toggleFilter('user-adv')">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-      Filters
-    </button>
-  
-    <div id="user-adv" class="filter-advanced">
+    <input type="text" id="user-filter-search" class="filter-input" placeholder="Search users..." onkeyup="applyUserFilters()">
+    <button class="btn-filter-toggle" onclick="toggleFilter('user-adv')">Filters</button>
+    <div id="user-adv" class="filter-advanced" style="display:none;">
       <div class="custom-dropdown">
         <button class="dropdown-btn" onclick="toggleDropdown('user-status-drop')">Status ▼</button>
         <div class="dropdown-content" id="user-status-drop">
@@ -28,562 +24,411 @@
     <table>
       <thead>
         <tr>
-          <th class="sortable" onclick="handleUserSort('username')">Username <span id="usort-username" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('firstName')">Name <span id="usort-firstName" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('workEmail')">Work Email <span id="usort-workEmail" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('role')">Role <span id="usort-role" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('position')">Position <span id="usort-position" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('status')">Status <span id="usort-status" class="sort-icon"></span></th>
+          <th>Username</th>
+          <th>Name</th>
+          <th>Work Email</th>
+          <th>Role</th>
+          <th>Position</th>
+          <th>Status</th>
           <th>Action</th>
         </tr>
       </thead>
-      <tbody id="userTableBody"></tbody>
+      <tbody id="userTableBody">
+        <tr><td colspan="7" style="text-align:center; padding: 20px;">Loading users...</td></tr>
+      </tbody>
     </table>
   </div>
 </div>
 
 <div id="addUserView" class="container" style="display: none;">
-  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to Users List</button>
+  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
-    <h2 style="margin-top: 0; color: var(--brand-grey);">Add New User</h2>
-    <form id="addUserForm" onsubmit="handleAddUserSubmit(event)" novalidate>
-      
-      <div class="section-title" style="margin-top: 0;">Account Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>Username (Required) *</label><input type="text" id="usr-username"></div>
-        <div class="form-group"><label>Work Email (Required) *</label><input type="email" id="usr-workEmail"></div>
-      </div>
-      <div class="form-group">
-        <label>Role *</label>
-        <select id="usr-role">
-          <option value="Admin">Admin</option>
-          <option value="Sales Manager">Sales Manager</option>
-          <option value="Account Manager">Account Manager</option>
-          <option value="Account Support">Account Support</option>
-        </select>
-      </div>
-
-      <div class="section-title">Personal Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>First Name</label><input type="text" id="usr-firstName"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" id="usr-lastName"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Birthday</label><input type="date" id="usr-birthday"></div>
-        <div class="form-group"><label>Personal Email</label><input type="email" id="usr-personalEmail"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Phone Number</label><input type="text" id="usr-phone"></div>
-        <div class="form-group"><label>Home Address</label><input type="text" id="usr-address"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Facebook URL</label><input type="url" id="usr-facebookUrl" placeholder="https://www.facebook.com/..."></div>
-        <div class="form-group"><label>Profile Photo</label><input type="file" id="usr-photoInput" accept="image/*"></div>
-      </div>
-
-      <div class="section-title">Employment Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>Position / Title</label><input type="text" id="usr-position"></div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="usr-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+    <h2 style="margin-top:0;">Add New System User</h2>
+    <form id="addUserForm" onsubmit="handleAddUserSubmit(event)">
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Basic Credentials</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group">
+            <label>Profile Photo</label>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <img id="add-photo-preview" src="https://via.placeholder.com/100" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
+              <input type="file" id="add-photo-input" accept="image/*" onchange="previewPhoto(this, 'add-photo-preview')">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Username *</label><input type="text" id="add-user-username" required class="form-control"></div>
+          <div class="form-group"><label>Role *</label>
+            <select id="add-user-role" required class="form-control">
+              <option value="Admin">Admin</option>
+              <option value="Account Manager">Account Manager</option>
+              <option value="Account Support">Account Support</option>
+              <option value="Sales Manager">Sales Manager</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Work Email *</label><input type="email" id="add-user-email" required class="form-control"></div>
+          <div class="form-group"><label>Status</label>
+            <select id="add-user-status" class="form-control">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Employment Type</label>
-          <select id="usr-empType"><option value="Full Time">Full Time</option><option value="Part Time">Part Time</option><option value="Contractor">Contractor</option></select>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group"><label>First Name</label><input type="text" id="add-user-fname" class="form-control"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" id="add-user-lname" class="form-control"></div>
         </div>
-        <div class="form-group"><label>Date Hired</label><input type="date" id="usr-dateHired"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Birthday</label><input type="date" id="add-user-bday" class="form-control"></div>
+          <div class="form-group"><label>Personal Email</label><input type="email" id="add-user-pemail" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone</label><input type="text" id="add-user-phone" class="form-control"></div>
+          <div class="form-group"><label>Facebook URL</label><input type="url" id="add-user-fb" class="form-control"></div>
+        </div>
+        <div class="form-group" style="width:100%;"><label>Home Address</label><input type="text" id="add-user-addr" class="form-control"></div>
       </div>
 
-      <div class="action-buttons" style="justify-content: flex-end;"><button type="submit" class="btn-primary" id="usr-submit">Create User</button></div>
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Employment Details</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group"><label>Position</label><input type="text" id="add-user-pos" class="form-control"></div>
+          <div class="form-group"><label>Employment Type</label>
+            <select id="add-user-emptype" class="form-control">
+              <option value="Full-Time">Full-Time</option>
+              <option value="Part-Time">Part-Time</option>
+              <option value="Contractor">Contractor</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="add-user-hired" class="form-control"></div></div>
+      </div>
+      <div class="action-buttons"><button type="submit" class="btn-primary" id="add-user-submit">Create User</button></div>
     </form>
-    <div id="add-user-status" class="status-msg"></div>
+    <div id="add-user-msg" class="status-msg"></div>
   </div>
 </div>
 
 <div id="editUserView" class="container" style="display: none;">
-  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to Users List</button>
+  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
-    <h2 style="margin-top: 0; color: var(--brand-grey);">Edit User Profile</h2>
-    <form id="editUserForm" onsubmit="handleEditUserSubmit(event)" novalidate>
-      <input type="hidden" id="edu-rowIndex">
-      
-      <div class="section-title" style="margin-top: 0;">Account Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>Username (Required) *</label><input type="text" id="edu-username"></div>
-        <div class="form-group"><label>Work Email (Required) *</label><input type="email" id="edu-workEmail"></div>
-      </div>
-      <div class="form-group">
-        <label>Role *</label>
-        <select id="edu-role">
-          <option value="Admin">Admin</option>
-          <option value="Sales Manager">Sales Manager</option>
-          <option value="Account Manager">Account Manager</option>
-          <option value="Account Support">Account Support</option>
-        </select>
-      </div>
-
-      <div class="section-title">Personal Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>First Name</label><input type="text" id="edu-firstName"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" id="edu-lastName"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Birthday</label><input type="date" id="edu-birthday"></div>
-        <div class="form-group"><label>Personal Email</label><input type="email" id="edu-personalEmail"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Phone Number</label><input type="text" id="edu-phone"></div>
-        <div class="form-group"><label>Home Address</label><input type="text" id="edu-address"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label>Facebook URL</label><input type="url" id="edu-facebookUrl" placeholder="https://www.facebook.com/..."></div>
-        <div class="form-group"><label>Profile Photo (Leave blank to keep current)</label><input type="file" id="edu-photoInput" accept="image/*"></div>
-      </div>
-
-      <div class="section-title">Employment Information</div>
-      <div class="form-row">
-        <div class="form-group"><label>Position / Title</label><input type="text" id="edu-position"></div>
-        <div class="form-group">
-          <label>Status</label>
-          <select id="edu-status"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+    <h2 style="margin-top:0;">Edit User Profile</h2>
+    <form id="editUserForm" onsubmit="handleEditUserSubmit(event)">
+      <input type="hidden" id="edt-user-rowIndex">
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Basic Credentials</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group">
+            <label>Profile Photo</label>
+            <div style="display: flex; align-items: center; gap: 15px;">
+              <img id="edt-photo-preview" src="https://via.placeholder.com/100" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+              <input type="file" id="edt-photo-input" accept="image/*" onchange="previewPhoto(this, 'edt-photo-preview')">
+            </div>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Username</label><input type="text" id="edt-user-username" class="form-control" readonly style="background:#eee;"></div>
+          <div class="form-group"><label>Role</label>
+            <select id="edt-user-role" class="form-control">
+              <option value="Admin">Admin</option>
+              <option value="Account Manager">Account Manager</option>
+              <option value="Account Support">Account Support</option>
+              <option value="Sales Manager">Sales Manager</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Work Email</label><input type="email" id="edt-user-email" class="form-control"></div>
+          <div class="form-group"><label>Status</label>
+            <select id="edt-user-status" class="form-control">
+              <option value="Active">Active</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
         </div>
       </div>
-      <div class="form-row">
-        <div class="form-group">
-          <label>Employment Type</label>
-          <select id="edu-empType"><option value="Full Time">Full Time</option><option value="Part Time">Part Time</option><option value="Contractor">Contractor</option></select>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group"><label>First Name</label><input type="text" id="edt-user-fname" class="form-control"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" id="edt-user-lname" class="form-control"></div>
         </div>
-        <div class="form-group"><label>Date Hired</label><input type="date" id="edu-dateHired"></div>
+        <div class="form-row">
+          <div class="form-group"><label>Birthday</label><input type="date" id="edt-user-bday" class="form-control"></div>
+          <div class="form-group"><label>Personal Email</label><input type="email" id="edt-user-pemail" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone</label><input type="text" id="edt-user-phone" class="form-control"></div>
+          <div class="form-group"><label>Facebook URL</label><input type="url" id="edt-user-fb" class="form-control"></div>
+        </div>
+        <div class="form-group" style="width:100%;"><label>Home Address</label><input type="text" id="edt-user-addr" class="form-control"></div>
       </div>
 
-      <div class="action-buttons" style="justify-content: flex-end;"><button type="submit" class="btn-primary" id="edu-submit">Save Changes</button></div>
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Employment Details</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group"><label>Position</label><input type="text" id="edt-user-pos" class="form-control"></div>
+          <div class="form-group"><label>Employment Type</label>
+            <select id="edt-user-emptype" class="form-control">
+              <option value="Full-Time">Full-Time</option>
+              <option value="Part-Time">Part-Time</option>
+              <option value="Contractor">Contractor</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="edt-user-hired" class="form-control"></div></div>
+      </div>
+      <div class="action-buttons"><button type="submit" class="btn-primary" id="edt-user-submit">Update Profile</button></div>
     </form>
-    <div id="edit-user-status" class="status-msg"></div>
+    <div id="edt-user-msg" class="status-msg"></div>
   </div>
 </div>
 
 <div id="readOnlyUserView" class="container" style="display: none;">
-  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to Users List</button>
+  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
-    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-      <div style="display: flex; gap: 20px; align-items: center;">
-        <img id="rou-photo" src="" alt="Profile Photo" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid var(--brand-red); display: none;">
-        <div>
-          <h2 id="rou-fullName" style="margin: 0; color: var(--brand-grey); font-size: 28px;">Name</h2>
-          <p style="margin: 5px 0 0 0; color: var(--brand-grey); font-weight: bold;">@<span id="rou-username"></span></p>
+    <div style="display: flex; gap: 30px; align-items: flex-start;">
+      <img id="ro-user-photo" src="https://via.placeholder.com/150" style="width: 150px; height: 150px; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
+          <button class="btn-edit" id="ro-edit-link">Edit Profile</button>
         </div>
-      </div>
-      <div style="text-align: right;">
-        <div>
-          <span class="badge" id="rou-role" style="font-size: 14px; margin-right: 5px;">Role</span>
-          <span class="badge" id="rou-status" style="font-size: 14px; background-color: var(--brand-yellow);">Status</span>
+        <p id="ro-user-role-pos" style="margin: 0; color: #666; font-weight: bold;"></p>
+        <div id="ro-user-status-badge" style="margin-top: 10px;"></div>
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <p><strong>Username:</strong> <span id="ro-user-username"></span></p>
+            <p><strong>Work Email:</strong> <span id="ro-user-email"></span></p>
+            <p><strong>Personal Email:</strong> <span id="ro-user-pemail"></span></p>
+            <p><strong>Phone:</strong> <span id="ro-user-phone"></span></p>
+          </div>
+          <div>
+            <p><strong>Hire Date:</strong> <span id="ro-user-hired"></span></p>
+            <p><strong>Employment Type:</strong> <span id="ro-user-emptype"></span></p>
+            <p><strong>Birthday:</strong> <span id="ro-user-bday"></span></p>
+            <p><strong>Facebook:</strong> <span id="ro-user-fb"></span></p>
+          </div>
         </div>
-        <button id="rou-edit-btn" class="btn-edit" style="margin-top: 15px;">Edit Profile</button>
-      </div>
-    </div>
-    
-    <hr style="border: none; border-top: 1px solid #E3E3E3; margin: 30px 0;">
-    
-    <div class="form-row">
-      <div class="form-group">
-        <div class="section-title" style="margin-top: 0;">Contact & Personal</div>
-        <p><strong>Work Email:</strong> <a href="#" id="rou-workEmail" style="color: var(--brand-red);"></a></p>
-        <p><strong>Personal Email:</strong> <span id="rou-personalEmail"></span></p>
-        <p><strong>Phone:</strong> <span id="rou-phone"></span></p>
-        <p><strong>Address:</strong> <span id="rou-address"></span></p>
-        <p><strong>Birthday:</strong> <span id="rou-birthday"></span></p>
-        <p><strong>Facebook:</strong> <a href="#" id="rou-facebookUrl" target="_blank" style="color: var(--brand-red);"></a><span id="rou-facebookUrl-na" style="display:none; color: var(--brand-grey);">N/A</span></p>
-      </div>
-      <div class="form-group">
-        <div class="section-title" style="margin-top: 0;">Employment</div>
-        <p><strong>Position:</strong> <span id="rou-position"></span></p>
-        <p><strong>Employment Type:</strong> <span id="rou-empType"></span></p>
-        <p><strong>Date Hired:</strong> <span id="rou-dateHired"></span></p>
+        <p style="margin-top:15px;"><strong>Home Address:</strong> <span id="ro-user-addr"></span></p>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  /* --- USERS MODULE SCRIPTS --- */
+  /* --- UI HELPERS & IMAGE FIX --- */
+
+  /** * Transforms Drive URLs into thumbnail links for cross-origin rendering.
+   * Ensures profile photos show up in the hub.
+   * @param {string} url - The raw Drive link from the sheet.
+   */
+  function getDirectImgUrl(url) {
+    if (!url || !url.includes("drive.google.com")) return url || 'https://via.placeholder.com/150';
+    try {
+      var id = url.match(/[-\w]{25,}/);
+      if (id) return "https://drive.google.com/thumbnail?id=" + id[0] + "&sz=w500";
+    } catch (e) { return url; }
+    return url;
+  }
+
+  /** Toggles accordion panels */
+  function toggleAccordion(element) {
+    element.classList.toggle("active");
+    var panel = element.nextElementSibling;
+    panel.style.display = (panel.style.display === "block") ? "none" : "block";
+  }
+
+  /** Formats date strings for HTML inputs */
+  function safelyFormatDate(dateStr) {
+    if (!dateStr) return "";
+    try {
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "";
+      return d.toISOString().split('T')[0];
+    } catch(e) { return ""; }
+  }
+
+  /** Real-time photo preview */
+  function previewPhoto(input, previewId) {
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) { document.getElementById(previewId).src = e.target.result; };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  /* --- DATA FETCHING & RENDERING --- */
   
   var GLOBAL_USER_DATA = [];
-  var CURRENT_USER_SORT_COLUMN = 'username'; 
-  var CURRENT_USER_SORT_DESC = false; 
 
+  /** Success handler for users fetch */
   function populateUsersTable(users) {
-    GLOBAL_USER_DATA = users;
+    GLOBAL_USER_DATA = users || [];
     applyUserFilters();
   }
 
-  function handleUserSort(column) {
-    if (CURRENT_USER_SORT_COLUMN === column) {
-      CURRENT_USER_SORT_DESC = !CURRENT_USER_SORT_DESC; 
-    } else {
-      CURRENT_USER_SORT_COLUMN = column;
-      CURRENT_USER_SORT_DESC = false; 
-    }
-    applyUserFilters();
-  }
-
+  /** Applies search and status filters */
   function applyUserFilters() {
-    var searchText = document.getElementById('user-filter-search').value.toLowerCase();
-    var checkedStatuses = Array.from(document.querySelectorAll('.user-filter-status-cb:checked')).map(cb => cb.value);
-
-    var filteredData = GLOBAL_USER_DATA.filter(function(user) {
-      var fullName = ((user.firstName || "") + " " + (user.lastName || "")).toLowerCase();
-      var matchesSearch = ((user.username || "").toLowerCase().includes(searchText) || 
-                           fullName.includes(searchText) || 
-                           (user.workEmail || "").toLowerCase().includes(searchText));
-      
-      var matchesStatus = checkedStatuses.includes(user.status);
-
-      return matchesSearch && matchesStatus;
+    var searchEl = document.getElementById('user-filter-search');
+    var search = searchEl ? searchEl.value.toLowerCase() : "";
+    var checkedStatus = Array.from(document.querySelectorAll('.user-filter-status-cb:checked')).map(cb => cb.value);
+    var filtered = GLOBAL_USER_DATA.filter(function(u) {
+      var fullname = ((u.firstName || "") + " " + (u.lastName || "")).toLowerCase();
+      var matchSearch = u.username.toLowerCase().includes(search) || fullname.includes(search) || u.workEmail.toLowerCase().includes(search);
+      var matchStatus = checkedStatus.length === 0 || checkedStatus.includes(u.status);
+      return matchSearch && matchStatus;
     });
-    filteredData.sort(function(a, b) {
-      var valA = a[CURRENT_USER_SORT_COLUMN] || '';
-      var valB = b[CURRENT_USER_SORT_COLUMN] || '';
-      
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
-
-      if (valA < valB) return CURRENT_USER_SORT_DESC ? 1 : -1;
-      if (valA > valB) return CURRENT_USER_SORT_DESC ? -1 : 1;
-      return 0;
-    });
-    document.querySelectorAll('.sort-icon').forEach(icon => { if(icon.id.startsWith('usort-')) icon.innerHTML = ''; });
-    var iconEl = document.getElementById('usort-' + CURRENT_USER_SORT_COLUMN);
-    if (iconEl) { iconEl.innerHTML = CURRENT_USER_SORT_DESC ? '▼' : '▲'; }
-
-    renderUserTableRows(filteredData);
+    renderUserTableRows(filtered);
   }
 
+  /** Renders rows into the table body */
   function renderUserTableRows(users) {
     var tbody = document.getElementById('userTableBody');
+    if (!tbody) return;
     tbody.innerHTML = '';
-    if (users.length === 0) { 
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No users found.</td></tr>';
-      return; 
+    if (users.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No users found.</td></tr>';
+      return;
     }
-    
-    users.forEach(function(user) {
+    users.forEach(function(u) {
+      var badgeClass = (u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
       var tr = document.createElement('tr');
-      tr.style.cursor = "pointer"; // Make it look clickable
-      
-      tr.onclick = function(e) { 
-        if (!e.target.closest('.btn-edit')) {
-          openReadOnlyUser(user.rowIndex); 
-        }
-      };
-
-      var fullName = (user.firstName || "") + " " + (user.lastName || "");
-      
-      // --- UNIFIED STATUS BADGE LOGIC ---
-      var badgeClass = "badge"; // default fallback
-      var statusText = (user.status || "").toLowerCase();
-      
-      if (statusText === 'active') badgeClass = 'badge badge-active';
-      else if (statusText === 'inactive') badgeClass = 'badge badge-inactive';
-      else if (statusText === 'onboarding') badgeClass = 'badge badge-onboarding';
-      else if (statusText === 'paused' || statusText === 'pending') badgeClass = 'badge badge-paused';
-      
+      tr.style.cursor = "pointer";
+      tr.onclick = function(e) { if (!e.target.closest('.btn-edit')) openReadOnlyUser(u.rowIndex); };
       tr.innerHTML = `
-        <td><strong>${user.username}</strong></td>
-        <td>${fullName.trim() || "-"}</td>
-        <td>${user.workEmail}</td>
-        <td><span class="badge">${user.role}</span></td>
-        <td>${user.position || '-'}</td>
-        <td><span class="${badgeClass}">${user.status}</span></td>
-        <td><button class="btn-edit" onclick="openEditUserForm(${user.rowIndex})">Edit</button></td>
+        <td><strong>${u.username}</strong></td>
+        <td>${u.firstName} ${u.lastName}</td>
+        <td>${u.workEmail}</td>
+        <td>${u.role}</td>
+        <td>${u.position}</td>
+        <td><span class="badge ${badgeClass}">${u.status}</span></td>
+        <td><button class="btn-edit" onclick="openEditUserForm(${u.rowIndex}); event.stopPropagation();">Edit</button></td>
       `;
       tbody.appendChild(tr);
     });
   }
 
-  // --- Date Formatter Helper ---
-  function formatDateForInput(dateString) {
-    if (!dateString) return "";
-    var d = new Date(dateString);
-    if (isNaN(d.getTime())) return "";
-    var month = '' + (d.getMonth() + 1), day = '' + d.getDate(), year = d.getFullYear();
-    if (month.length < 2) month = '0' + month;
-    if (day.length < 2) day = '0' + day;
-    return [year, month, day].join('-');
+  /* --- FORM SUBMISSIONS --- */
+
+  /** Opens add user form with clean state */
+  function openAddUserForm() {
+    switchView('addUserView');
+    document.getElementById('addUserForm').reset();
+    document.getElementById('add-photo-preview').src = 'https://via.placeholder.com/100';
+    document.getElementById('add-user-msg').innerHTML = '';
   }
 
-  // --- Helper to handle File Upload ---
-  function uploadFile(inputId, callback, statusId, btnId) {
-    var fileInput = document.getElementById(inputId);
-    if (!fileInput || fileInput.files.length === 0) { 
-      callback(""); 
-      return;
-    }
-    
-    var file = fileInput.files[0];
-    var statusEl = document.getElementById(statusId);
-    var btnEl = document.getElementById(btnId);
-    // SAFETY CHECK: Prevent silent crashing by blocking files larger than 3MB
-    var maxSizeInBytes = 3 * 1024 * 1024;
-    if (file.size > maxSizeInBytes) {
-      statusEl.innerHTML = "Error: Photo is too large. Please use an image under 3MB.";
-      statusEl.style.color = "var(--brand-red)";
-      btnEl.disabled = false;
-      return;
-    }
-
-    var reader = new FileReader();
-    reader.onload = function(e) {
-      var content = e.target.result.split(',')[1];
-      google.script.run
-        .withSuccessHandler(function(res) {
-          // If the backend DriveApp failed but caught the error
-          if (res && res.toString().startsWith("Error:")) {
-            statusEl.innerHTML = "Drive Upload Failed: " + res;
-            statusEl.style.color = "var(--brand-red)";
-            btnEl.disabled = false;
-          } else {
-            callback(res); // Success! Pass the URL to the next step
-          }
-        })
-        .withFailureHandler(function(err) {
-          // If the server connection drops entirely
-          statusEl.innerHTML = "Connection Error: " + err.message;
-          statusEl.style.color = "var(--brand-red)";
-          btnEl.disabled = false;
-        })
-        .uploadProfilePhoto(content, file.name);
+  /** Submits 16 fields to backend */
+  function handleAddUserSubmit(e) {
+    if(e) e.preventDefault();
+    var btn = document.getElementById('add-user-submit');
+    btn.disabled = true;
+    document.getElementById('add-user-msg').innerHTML = 'Creating user...';
+    var obj = {
+      username: document.getElementById('add-user-username').value,
+      role: document.getElementById('add-user-role').value,
+      workEmail: document.getElementById('add-user-email').value,
+      firstName: document.getElementById('add-user-fname').value,
+      lastName: document.getElementById('add-user-lname').value,
+      birthday: document.getElementById('add-user-bday').value,
+      personalEmail: document.getElementById('add-user-pemail').value,
+      phone: document.getElementById('add-user-phone').value,
+      address: document.getElementById('add-user-addr').value,
+      facebookUrl: document.getElementById('add-user-fb').value,
+      position: document.getElementById('add-user-pos').value,
+      employmentType: document.getElementById('add-user-emptype').value,
+      dateHired: document.getElementById('add-user-hired').value,
+      status: document.getElementById('add-user-status').value,
+      profilePhotoUrl: document.getElementById('add-photo-preview').src
     };
-    reader.readAsDataURL(file);
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('add-user-msg').innerHTML = res;
+      btn.disabled = false;
+      if (res.includes("Success")) setTimeout(() => switchView('usersListView'), 1500);
+    }).processNewUser(obj);
   }
 
-
-  // --- EDIT USER LOGIC ---
+  /** Populates edit form with backend data */
   function openEditUserForm(rowIndex) {
     switchView('editUserView');
-    var statusMsg = document.getElementById('edit-user-status');
-    statusMsg.innerHTML = "Loading profile...";
-    statusMsg.style.color = "var(--brand-grey)";
-    google.script.run
-      .withSuccessHandler(function(data) {
-        if (data.error) {
-          statusMsg.innerHTML = "Backend Error: " + data.error;
-          statusMsg.style.color = "var(--brand-red)";
-          return;
-        }
-
-        try {
-          statusMsg.innerHTML = "";
-          
-          document.getElementById('edu-rowIndex').value = data.rowIndex;
-          
-          // Account
-          document.getElementById('edu-username').value = data.username || ""; 
-          document.getElementById('edu-workEmail').value = data.workEmail || "";
-          document.getElementById('edu-role').value = data.role || "Account Support";
-          
-          // Personal
-          document.getElementById('edu-firstName').value = data.firstName || ""; 
-          document.getElementById('edu-lastName').value = data.lastName || "";
-          document.getElementById('edu-birthday').value = formatDateForInput(data.birthday); 
-          document.getElementById('edu-personalEmail').value = data.personalEmail || "";
-          document.getElementById('edu-phone').value = data.phone || "";
-          document.getElementById('edu-address').value = data.address || "";
-          document.getElementById('edu-facebookUrl').value = data.facebookUrl || "";
-          // Photo
-          document.getElementById('editUserForm').dataset.existingPhoto = data.profilePhotoUrl || "";
-          document.getElementById('edu-photoInput').value = "";
-          // Clear file input
-          
-          // Employment
-          document.getElementById('edu-position').value = data.position || "";
-          document.getElementById('edu-status').value = data.status || "Active";
-          document.getElementById('edu-empType').value = data.employmentType || "Full Time";
-          document.getElementById('edu-dateHired').value = formatDateForInput(data.dateHired);
-        } catch (err) {
-          statusMsg.innerHTML = "Frontend Mapping Error: " + err.message;
-          statusMsg.style.color = "var(--brand-red)";
-        }
-      })
-      .withFailureHandler(function(error) {
-        statusMsg.innerHTML = "Server Error: " + error.message;
-        statusMsg.style.color = "var(--brand-red)";
-      })
-      .getUserById(rowIndex);
-  }
-  
-  
-
-  // --- ADD USER LOGIC ---
-  function handleAddUserSubmit(e) {
-    e.preventDefault();
-    var user = document.getElementById('usr-username').value;
-    var email = document.getElementById('usr-workEmail').value;
-    if (!user || !email) { alert("Username and Work Email are required."); return; }
-
-    document.getElementById('add-user-status').innerHTML = "Processing..."; 
-    document.getElementById('add-user-status').style.color = "var(--brand-grey)";
-    document.getElementById('usr-submit').disabled = true;
-    // Notice we now pass the status ID and button ID to the upload function
-    uploadFile('usr-photoInput', function(photoUrl) {
-      var obj = {
-        username: user,
-        workEmail: email,
-        role: document.getElementById('usr-role').value,
-        firstName: document.getElementById('usr-firstName').value,
-        lastName: document.getElementById('usr-lastName').value,
-        birthday: document.getElementById('usr-birthday').value,
-        personalEmail: document.getElementById('usr-personalEmail').value,
-        phone: document.getElementById('usr-phone').value,
-        address: document.getElementById('usr-address').value,
-        facebookUrl: document.getElementById('usr-facebookUrl').value,
-        profilePhotoUrl: photoUrl,
-        position: document.getElementById('usr-position').value,
-        status: document.getElementById('usr-status').value,
-        employmentType: document.getElementById('usr-empType').value,
-        dateHired: document.getElementById('usr-dateHired').value
-      };
-      google.script.run
-        .withSuccessHandler(res => {
-          document.getElementById('add-user-status').innerHTML = res;
-          document.getElementById('add-user-status').style.color = res.includes("Error") ? "var(--brand-red)" : "green";
-          document.getElementById('usr-submit').disabled = false;
-          if (!res.includes("Error")) { 
-            document.getElementById('addUserForm').reset();
-            setTimeout(() => switchView('usersListView'), 1500); 
-          }
-        })
-        .withFailureHandler(err => {
-          document.getElementById('add-user-status').innerHTML = "Save Error: " + err.message;
-          document.getElementById('add-user-status').style.color = "var(--brand-red)";
-          document.getElementById('usr-submit').disabled = false;
-        })
-        .processNewUser(obj);
-    }, 'add-user-status', 'usr-submit'); // Passing IDs for error handling
+    google.script.run.withSuccessHandler(function(u) {
+      document.getElementById('edt-user-rowIndex').value = u.rowIndex;
+      document.getElementById('edt-user-username').value = u.username;
+      document.getElementById('edt-user-role').value = u.role;
+      document.getElementById('edt-user-email').value = u.workEmail;
+      document.getElementById('edt-user-fname').value = u.firstName;
+      document.getElementById('edt-user-lname').value = u.lastName;
+      document.getElementById('edt-user-bday').value = safelyFormatDate(u.birthday);
+      document.getElementById('edt-user-pemail').value = u.personalEmail;
+      document.getElementById('edt-user-phone').value = u.phone;
+      document.getElementById('edt-user-addr').value = u.address;
+      document.getElementById('edt-user-fb').value = u.facebookUrl;
+      document.getElementById('edt-user-pos').value = u.position;
+      document.getElementById('edt-user-emptype').value = u.employmentType || "Full-Time";
+      document.getElementById('edt-user-hired').value = safelyFormatDate(u.dateHired);
+      document.getElementById('edt-user-status').value = u.status;
+      document.getElementById('edt-photo-preview').src = getDirectImgUrl(u.profilePhotoUrl);
+    }).getUserById(rowIndex);
   }
 
-  // --- EDIT USER SUBMIT LOGIC ---
+  /** Submits profile updates */
   function handleEditUserSubmit(e) {
-    e.preventDefault();
-    var user = document.getElementById('edu-username').value;
-    var email = document.getElementById('edu-workEmail').value;
-    if (!user || !email) { alert("Username and Work Email are required."); return; }
-
-    document.getElementById('edit-user-status').innerHTML = "Saving changes..."; 
-    document.getElementById('edit-user-status').style.color = "var(--brand-grey)";
-    document.getElementById('edu-submit').disabled = true;
-
-    var fileInput = document.getElementById('edu-photoInput');
-    if (fileInput.files.length > 0) {
-      // Pass IDs for error unlocking
-      uploadFile('edu-photoInput', function(url) {
-        sendEditData(url);
-      }, 'edit-user-status', 'edu-submit');
-    } else {
-      var existingUrl = document.getElementById('editUserForm').dataset.existingPhoto || "";
-      sendEditData(existingUrl);
-    }
-  }
-
-  function sendEditData(photoUrl) {
+    if(e) e.preventDefault();
+    var btn = document.getElementById('edt-user-submit');
+    btn.disabled = true;
     var obj = {
-      rowIndex: document.getElementById('edu-rowIndex').value,
-      username: document.getElementById('edu-username').value,
-      workEmail: document.getElementById('edu-workEmail').value,
-      role: document.getElementById('edu-role').value,
-      status: document.getElementById('edu-status').value,
-      firstName: document.getElementById('edu-firstName').value,
-      lastName: document.getElementById('edu-lastName').value,
-      birthday: document.getElementById('edu-birthday').value,
-      personalEmail: document.getElementById('edu-personalEmail').value,
-      phone: document.getElementById('edu-phone').value,
-      address: document.getElementById('edu-address').value,
-      facebookUrl: document.getElementById('edu-facebookUrl').value,
-      profilePhotoUrl: photoUrl,
-      position: document.getElementById('edu-position').value,
-      employmentType: document.getElementById('edu-empType').value,
-      dateHired: document.getElementById('edu-dateHired').value
+      rowIndex: document.getElementById('edt-user-rowIndex').value,
+      username: document.getElementById('edt-user-username').value,
+      role: document.getElementById('edt-user-role').value,
+      workEmail: document.getElementById('edt-user-email').value,
+      firstName: document.getElementById('edt-user-fname').value,
+      lastName: document.getElementById('edt-user-lname').value,
+      birthday: document.getElementById('edt-user-bday').value,
+      personalEmail: document.getElementById('edt-user-pemail').value,
+      phone: document.getElementById('edt-user-phone').value,
+      address: document.getElementById('edt-user-addr').value,
+      facebookUrl: document.getElementById('edt-user-fb').value,
+      position: document.getElementById('edt-user-pos').value,
+      employmentType: document.getElementById('edt-user-emptype').value,
+      dateHired: document.getElementById('edt-user-hired').value,
+      status: document.getElementById('edt-user-status').value,
+      profilePhotoUrl: document.getElementById('edt-photo-preview').src
     };
-    google.script.run
-      .withSuccessHandler(res => {
-        document.getElementById('edit-user-status').innerHTML = res; 
-        document.getElementById('edit-user-status').style.color = res.includes("Error") ? "var(--brand-red)" : "green";
-        document.getElementById('edu-submit').disabled = false;
-        if (!res.includes("Error")) { setTimeout(() => switchView('usersListView'), 1500); }
-      })
-      .withFailureHandler(err => {
-        document.getElementById('edit-user-status').innerHTML = "Database Error: " + err.message;
-        document.getElementById('edit-user-status').style.color = "var(--brand-red)";
-        document.getElementById('edu-submit').disabled = false;
-      })
-      .updateUserRecord(obj);
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('edt-user-msg').innerHTML = res;
+      btn.disabled = false;
+      if (res.includes("Success")) setTimeout(() => switchView('usersListView'), 1500);
+    }).updateUserRecord(obj);
   }
 
-  // --- View Read-Only User ---
+  /** Populates read-only view */
   function openReadOnlyUser(rowIndex) {
     switchView('readOnlyUserView');
-    document.getElementById('rou-fullName').innerHTML = "Loading...";
-    document.getElementById('rou-edit-btn').setAttribute('onclick', 'openEditUserForm(' + rowIndex + ')');
-
-    google.script.run.withSuccessHandler(function(data) {
-      if (data.error) { alert("Error loading user: " + data.error); return; }
-
-      var fullName = (data.firstName || "") + " " + (data.lastName || "");
-      document.getElementById('rou-fullName').innerHTML = fullName.trim() || "-";
-      document.getElementById('rou-username').innerHTML = data.username || "N/A";
-      
-      // Handle Photo
-      var photoEl = document.getElementById('rou-photo');
-      if (data.profilePhotoUrl) {
-        // Extract the exact 33-character Google Drive File ID using regex
-        var fileIdMatch = data.profilePhotoUrl.match(/[-\w]{25,}/); 
-        
-        if (fileIdMatch && fileIdMatch[0]) {
-          // Bypasses Drive's redirect blocks by requesting a generated thumbnail (w400 = 400px wide)
-          photoEl.src = "https://drive.google.com/thumbnail?id=" + fileIdMatch[0] + "&sz=w400";
-        } else {
-          // Fallback just in case
-          photoEl.src = data.profilePhotoUrl;
-        }
-        photoEl.style.display = 'block';
-      } else {
-        photoEl.style.display = 'none';
-      }
-
-      // Handle Badges
-      document.getElementById('rou-role').innerHTML = data.role || "N/A";
-      var statusEl = document.getElementById('rou-status');
-      statusEl.innerHTML = data.status || "N/A";
-      statusEl.style.backgroundColor = (data.status === 'Active') ? 'var(--brand-yellow)' : '#ccc';
-      // Data Fields
-      var workEmailEl = document.getElementById('rou-workEmail');
-      workEmailEl.innerHTML = data.workEmail || "N/A";
-      workEmailEl.href = "mailto:" + data.workEmail;
-      
-      document.getElementById('rou-personalEmail').innerHTML = data.personalEmail || "N/A";
-      document.getElementById('rou-phone').innerHTML = data.phone || "N/A";
-      document.getElementById('rou-address').innerHTML = data.address || "N/A";
-      document.getElementById('rou-birthday').innerHTML = data.birthday || "N/A";
-      
-      // Facebook Link Logic
-      var fbUrl = document.getElementById('rou-facebookUrl');
-      var fbNa = document.getElementById('rou-facebookUrl-na');
-      if (data.facebookUrl) {
-        fbUrl.href = data.facebookUrl;
-        fbUrl.innerHTML = "View Profile";
-        fbUrl.style.display = "inline";
-        fbNa.style.display = "none";
-      } else {
-        fbUrl.style.display = "none";
-        fbNa.style.display = "inline";
-      }
-
-      document.getElementById('rou-position').innerHTML = data.position || "N/A";
-      document.getElementById('rou-empType').innerHTML = data.employmentType || "N/A";
-      document.getElementById('rou-dateHired').innerHTML = data.dateHired || "N/A";
-      
+    google.script.run.withSuccessHandler(function(u) {
+      document.getElementById('ro-user-photo').src = getDirectImgUrl(u.profilePhotoUrl);
+      document.getElementById('ro-user-fullname').innerText = (u.firstName || "") + " " + (u.lastName || "");
+      document.getElementById('ro-user-role-pos').innerText = u.role + " | " + u.position;
+      document.getElementById('ro-user-username').innerText = u.username;
+      document.getElementById('ro-user-email').innerText = u.workEmail;
+      document.getElementById('ro-user-pemail').innerText = u.personalEmail || "N/A";
+      document.getElementById('ro-user-phone').innerText = u.phone || "N/A";
+      document.getElementById('ro-user-hired').innerText = u.dateHired || "N/A";
+      document.getElementById('ro-user-emptype').innerText = u.employmentType || "N/A";
+      document.getElementById('ro-user-bday').innerText = u.birthday || "N/A";
+      document.getElementById('ro-user-fb').innerText = u.facebookUrl || "N/A";
+      document.getElementById('ro-user-addr').innerText = u.address || "N/A";
+      var badgeClass = (u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
+      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status}</span>`;
+      document.getElementById('ro-edit-link').onclick = () => openEditUserForm(u.rowIndex);
     }).getUserById(rowIndex);
   }
 </script>
