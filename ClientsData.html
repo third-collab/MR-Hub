@@ -1,9 +1,36 @@
-<!-- 
-  Clients Management Module - Frontend
-  100% INTEGRITY RESTORE: Includes correctly grouped Original vs Current dates, 
-  Dual End Dates, protected history tracking, fixed Read-Only styling, initialized rich-text editors.
-  NEW: Inline Note Editing combined seamlessly with Drag/Drop Reordering. Metadata aligned horizontally.
--->
+<style>
+  /* Modular Loading Overlay for Client Forms */
+  .client-loading-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 10;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--border-radius-large);
+    flex-direction: column;
+    gap: 10px;
+  }
+  .spinner-client {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--brand-red);
+    border-radius: 50%;
+    animation: spin-client 1s linear infinite;
+  }
+  @keyframes spin-client {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  /* Ensure wrappers are positioned for overlays */
+  #addClientView .form-wrapper, 
+  #editClientView .form-wrapper,
+  #readOnlyUserView .form-wrapper,
+  #readOnlyClientView .form-wrapper { position: relative; }
+</style>
+
 <div id="clientListView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
   
@@ -65,9 +92,14 @@
   </div>
 </div>
 
+<div id="addUserView" class="container" style="display: none;">
+  <!-- This view is managed in UsersData.html -->
+</div>
+
 <div id="addClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   <div class="form-wrapper">
+    <div id="add-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Creating Client...</span></div>
     <h2 style="margin-top: 0; color: var(--brand-grey);">Add New Client</h2>
     <form id="addClientForm" onsubmit="handleAddClientSubmit(event)" novalidate>
       
@@ -163,7 +195,7 @@
         </div>
       </div>
 
-      <div class="action-buttons" style="justify-content: flex-end; margin-top: 20px;">
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
         <button type="submit" class="btn-primary" id="add-submit">Submit & Add Client</button>
       </div>
     </form>
@@ -174,6 +206,7 @@
 <div id="editClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   <div class="form-wrapper">
+    <div id="edit-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span id="edit-overlay-text">Loading Client...</span></div>
     <h2 style="margin-top: 0; color: var(--brand-grey);">Edit Client Details</h2>
     <form id="editClientForm" onsubmit="handleEditClientSubmit(event)" novalidate>
       <input type="hidden" id="edt-rowIndex">
@@ -228,7 +261,6 @@
 
       <button type="button" class="accordion" onclick="toggleAccordion(this)">Contract Info & Services</button>
       <div class="panel">
-        
         <div class="form-row" style="margin-top: 15px;">
           <div class="form-group">
             <label>Original Contract Start</label>
@@ -365,11 +397,47 @@
         <div id="edt-opnotes-container" style="margin-bottom: 20px;"></div>
       </div>
 
-      <div class="action-buttons" style="justify-content: flex-end; margin-top: 20px;">
-        <button type="button" class="btn-primary" onclick="handleEditClientSubmit()" id="edt-submit">Save Changes</button>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="edt-submit">Save Changes</button>
       </div>
     </form>
     <div id="ed-statusMsg" class="status-msg"></div>
+  </div>
+</div>
+
+<div id="readOnlyUserView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
+  <div class="form-wrapper">
+    <!-- NEW: Loading Overlay for User Profile View -->
+    <div id="ro-user-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Loading Profile...</span></div>
+    
+    <div style="display: flex; gap: 30px; align-items: flex-start;">
+      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 150px; height: 150px; min-width: 150px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: #f9f9f9;">
+      <div style="flex: 1;">
+        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+          <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
+          <button type="button" class="btn-edit" id="ro-edit-link">Edit Profile</button>
+        </div>
+        <p id="ro-user-role-pos" style="margin: 0; color: #666; font-weight: bold;"></p>
+        <div id="ro-user-status-badge" style="margin-top: 10px;"></div>
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+          <div>
+            <p><strong>Username:</strong> <span id="ro-user-username"></span></p>
+            <p><strong>Work Email:</strong> <span id="ro-user-email"></span></p>
+            <p><strong>Personal Email:</strong> <span id="ro-user-pemail"></span></p>
+            <p><strong>Phone:</strong> <span id="ro-user-phone"></span></p>
+          </div>
+          <div>
+            <p><strong>Hire Date:</strong> <span id="ro-user-hired"></span></p>
+            <p><strong>Employment Type:</strong> <span id="ro-user-emptype"></span></p>
+            <p><strong>Birthday:</strong> <span id="ro-user-bday"></span></p>
+            <p><strong>Facebook:</strong> <span id="ro-user-fb"></span></p>
+          </div>
+        </div>
+        <p style="margin-top:15px;"><strong>Home Address:</strong> <span id="ro-user-addr"></span></p>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -377,6 +445,8 @@
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   
   <div class="form-wrapper" style="max-width: 900px; margin-top: 0;">
+    <!-- NEW: Loading Overlay for Client Profile View -->
+    <div id="ro-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Loading Client Profile...</span></div>
     <div id="ro-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; border-bottom: 2px solid #E3E3E3; padding-bottom: 15px;">
        <h2 id="ro-title" style="margin:0; color: var(--brand-grey);"></h2>
        <button id="ro-edit-btn" class="btn-edit" style="padding: 8px 16px;">Edit Client</button>
@@ -472,6 +542,17 @@
       
       if (targetContent) targetContent.style.display = 'block';
       if (targetBtn) targetBtn.classList.add('active');
+    }
+  }
+
+  /** Controls visibility of loading overlay for clients */
+  function toggleClientOverlay(id, show, text) {
+    var overlay = document.getElementById(id);
+    if (!overlay) return;
+    overlay.style.display = show ? 'flex' : 'none';
+    if (text) {
+      var txtEl = overlay.querySelector('span');
+      if (txtEl) txtEl.innerText = text;
     }
   }
   
@@ -578,7 +659,6 @@
       <input type="hidden" class="op-timestamp" value="${timestamp}">
       <div style="flex:1;">
          <input type="text" class="op-content form-control" placeholder="Enter operational note..." value="${content}" style="width: 100%; box-sizing: border-box;">
-         <div style="font-size: 11px; color: #888; margin-top: 5px;">Last added by ${editor} on ${new Date(timestamp).toLocaleDateString()}</div>
       </div>
       <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline; flex-shrink:0;" onclick="this.parentElement.remove()">Remove</button>
     `;
@@ -778,10 +858,16 @@
     if(e) e.preventDefault();
     var company = document.getElementById('add-company').value;
     var brand = document.getElementById('add-brand').value;
-    if (!company || !brand) { alert("Company Name and Brand Name are required."); return; }
+    if (!company || !brand) { 
+      var msg = document.getElementById('add-status');
+      if(msg) { msg.innerHTML = "Company Name and Brand Name are required."; msg.style.color = "var(--brand-red)"; }
+      return; 
+    }
+
+    toggleClientOverlay('add-client-overlay', true, 'Creating Client...');
 
     var statusEl = document.getElementById('add-status');
-    if(statusEl) { statusEl.innerHTML = "Creating client record..."; statusEl.style.color = "var(--brand-grey)"; }
+    if(statusEl) { statusEl.innerHTML = ''; }
     var submitBtn = document.getElementById('add-submit');
     if(submitBtn) submitBtn.disabled = true;
 
@@ -805,13 +891,24 @@
     };
 
     google.script.run.withSuccessHandler(function(res) {
-      if(statusEl) { statusEl.innerHTML = res; statusEl.style.color = res.includes("Error") ? "var(--brand-red)" : "green"; }
-      if(submitBtn) submitBtn.disabled = false;
-      if (!res.includes("Error")) {
-        document.getElementById('addClientForm').reset();
-        if(addClientQuill) addClientQuill.setContents([]);
-        document.getElementById('add-contacts-container').innerHTML = '';
-        setTimeout(() => switchView('clientListView'), 1500);
+      toggleClientOverlay('add-client-overlay', false);
+      if(statusEl) { statusEl.innerHTML = res; }
+      
+      if (res.includes("Success")) {
+        if(statusEl) statusEl.style.color = "green";
+        setTimeout(() => {
+          // Sync list and route directly to the new client's Read-Only Profile
+          google.script.run.withSuccessHandler(function(clients) {
+             GLOBAL_CLIENT_DATA = clients || [];
+             var newClient = clients.find(c => c.brandName === clientData.brandName && c.companyName === clientData.companyName);
+             if (newClient) openReadOnlyClient(newClient.rowIndex);
+             else switchView('clientListView');
+             document.getElementById('addClientForm').reset();
+          }).getClientsList();
+        }, 1000);
+      } else {
+        if(statusEl) statusEl.style.color = "var(--brand-red)";
+        if(submitBtn) submitBtn.disabled = false;
       }
     }).processNewClient(clientData);
   }
@@ -824,7 +921,11 @@
     document.getElementById('addClientForm').reset();
     document.getElementById('add-contacts-container').innerHTML = '';
     if (addClientQuill) addClientQuill.setContents([]);
-
+    
+    var msgEl = document.getElementById('add-status');
+    if(msgEl) msgEl.innerHTML = '';
+    
+    toggleClientOverlay('add-client-overlay', false);
     switchView('addClientView');
     initClientEditors(); 
   }
@@ -833,20 +934,28 @@
     resetAccordions('editClientView');
     switchView('editClientView');
     initClientEditors();
+    
+    // Clear previous state immediately to prevent ghosting
+    document.getElementById('editClientForm').reset();
     document.getElementById('edt-contacts-container').innerHTML = '';
     document.getElementById('edt-shipping-container').innerHTML = '';
     document.getElementById('edt-return-container').innerHTML = '';
     document.getElementById('edt-opnotes-container').innerHTML = ''; 
-
-    // Reset service checkboxes before loading
     document.querySelectorAll('input[name="edt-services"]').forEach(cb => cb.checked = false);
+    if (editClientQuill) editClientQuill.setContents([]);
 
     var statusMsg = document.getElementById('ed-statusMsg');
-    if(statusMsg) { statusMsg.innerHTML = "Loading client data..."; statusMsg.style.color = "var(--brand-grey)"; }
+    if(statusMsg) { statusMsg.innerHTML = ''; }
+    
+    toggleClientOverlay('edit-client-overlay', true, 'Loading Client Data...');
 
     google.script.run.withSuccessHandler(function(data) {
-      if (data.error) { if(statusMsg) { statusMsg.innerHTML = data.error; statusMsg.style.color = "var(--brand-red)"; } return; }
-      if(statusMsg) statusMsg.innerHTML = "";
+      toggleClientOverlay('edit-client-overlay', false);
+      if (data.error) { 
+        if(statusMsg) { statusMsg.innerHTML = data.error; statusMsg.style.color = "var(--brand-red)"; } 
+        return; 
+      }
+
       document.getElementById('edt-rowIndex').value = data.rowIndex;
       document.getElementById('edt-company').value = data.companyName || "";
       document.getElementById('edt-brand').value = data.brandName || "";
@@ -863,7 +972,6 @@
       if (data.addContacts) { try { JSON.parse(data.addContacts).forEach(c => addContactRow('edt-contacts-container', c)); } catch(e) {} }
       
       document.getElementById('edt-value').value = data.monthlyVal || "";
-      
       document.getElementById('edt-orig-date').value = safelyFormatDate(data.origStartDate);
       document.getElementById('edt-current-date').value = safelyFormatDate(data.currentStartDate);
       document.getElementById('edt-orig-expDate').value = safelyFormatDate(data.origExpDate);
@@ -879,7 +987,6 @@
       document.getElementById('edt-ppcDate').value = safelyFormatDate(data.ppcDate);
       document.getElementById('edt-dspDate').value = safelyFormatDate(data.dspDate);
       
-      // Select appropriate services
       if (data.services) {
         var srvArr = data.services.split(',').map(s => s.trim());
         document.querySelectorAll('input[name="edt-services"]').forEach(cb => {
@@ -902,18 +1009,19 @@
       
       if (editClientQuill) {
         editClientQuill.clipboard.dangerouslyPasteHTML(data.handoverNotes || "");
-      } else {
-        setTimeout(() => { if (editClientQuill) editClientQuill.clipboard.dangerouslyPasteHTML(data.handoverNotes || ""); }, 500);
       }
     }).getClientById(rowIndex);
   }
 
   function handleEditClientSubmit(e) {
     if(e) e.preventDefault();
-    var statusMsg = document.getElementById('ed-statusMsg');
-    if(statusMsg) { statusMsg.innerHTML = "Saving changes..."; statusMsg.style.color = "var(--brand-grey)"; }
+    
     var btn = document.getElementById('edt-submit');
-    if(btn) btn.disabled = true;
+    btn.disabled = true;
+    toggleClientOverlay('edit-client-overlay', true, 'Saving Changes...');
+
+    var statusMsg = document.getElementById('ed-statusMsg');
+    if(statusMsg) { statusMsg.innerHTML = ''; }
     
     var edtServices = [];
     document.querySelectorAll('input[name="edt-services"]:checked').forEach(cb => edtServices.push(cb.value));
@@ -945,9 +1053,20 @@
     };
     
     google.script.run.withSuccessHandler(function(res) {
-      if(statusMsg) { statusMsg.innerHTML = "Client updated successfully!"; statusMsg.style.color = "green"; }
-      if(btn) btn.disabled = false;
-      setTimeout(() => switchView('clientListView'), 1500);
+      toggleClientOverlay('edit-client-overlay', false);
+      if(statusMsg) { statusMsg.innerHTML = res; }
+      
+      if (res.includes("Success")) {
+        if(statusMsg) statusMsg.style.color = "green";
+        setTimeout(() => {
+          // Silent list sync and route back to updated Read-Only Profile
+          google.script.run.withSuccessHandler(populateClientsTable).getClientsList();
+          openReadOnlyClient(clientData.rowIndex);
+        }, 1000);
+      } else {
+        if(statusMsg) statusMsg.style.color = "var(--brand-red)";
+        btn.disabled = false;
+      }
     }).updateClientRecord(clientData);
   }
 
@@ -958,17 +1077,19 @@
 
   function openReadOnlyClient(rowIndex) {
     switchView('readOnlyClientView');
-    document.getElementById('ro-title').innerText = "Loading...";
-    document.getElementById('ro-overview').innerHTML = "<p>Loading client data...</p>";
-    
-    // Add refreshing states instead of blanking out completely
-    document.getElementById('ro-contacts').innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px;">Refreshing contacts...</p>';
-    document.getElementById('ro-handoverNotes').innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px;">Refreshing notes...</p>';
-    document.getElementById('ro-opnotes-list').innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px; background:#fff; border:1px solid #eee; border-radius:4px;">Refreshing notes...</p>';
-    document.getElementById('ro-history-container').innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px;">Refreshing history...</p>';
+    // Clear view immediately while loading to ensure no ghost data
+    document.getElementById('ro-title').innerText = "";
+    document.getElementById('ro-overview').innerHTML = "";
+    document.getElementById('ro-contacts').innerHTML = "";
+    document.getElementById('ro-handoverNotes').innerHTML = "";
+    document.getElementById('ro-opnotes-list').innerHTML = "";
+    document.getElementById('ro-history-container').innerHTML = "";
     hideQuickNoteInput(); 
+
+    toggleClientOverlay('ro-client-overlay', true, 'Loading Profile...');
     
     google.script.run.withSuccessHandler(function(data) {
+      toggleClientOverlay('ro-client-overlay', false);
       if (!data) return;
       window.CURRENT_VIEW_CLIENT_DATA = data; 
       
@@ -1084,6 +1205,40 @@
     }).getClientById(rowIndex);
   }
 
+  /** Populates read-only user view with loading overlay */
+  function openReadOnlyUser(rowIndex) {
+    switchView('readOnlyUserView');
+    
+    // Clear view immediately while loading to ensure no ghost data
+    document.getElementById('ro-user-photo').src = DEFAULT_AVATAR;
+    document.getElementById('ro-user-fullname').innerText = '';
+    document.getElementById('ro-user-role-pos').innerText = '';
+    document.getElementById('ro-user-status-badge').innerHTML = '';
+    
+    toggleClientOverlay('ro-user-overlay', true, 'Loading Profile...');
+    
+    google.script.run.withSuccessHandler(function(u) {
+      toggleClientOverlay('ro-user-overlay', false);
+      
+      document.getElementById('ro-user-photo').src = getDirectImgUrl(u.profilePhotoUrl);
+      document.getElementById('ro-user-fullname').innerText = (u.firstName || "") + " " + (u.lastName || "");
+      document.getElementById('ro-user-role-pos').innerText = u.role + " | " + u.position;
+      document.getElementById('ro-user-username').innerText = u.username;
+      document.getElementById('ro-user-email').innerText = u.workEmail;
+      document.getElementById('ro-user-pemail').innerText = u.personalEmail || "N/A";
+      document.getElementById('ro-user-phone').innerText = u.phone || "N/A";
+      document.getElementById('ro-user-hired').innerText = u.dateHired || "N/A";
+      document.getElementById('ro-user-emptype').innerText = u.employmentType || "N/A";
+      document.getElementById('ro-user-bday').innerText = u.birthday || "N/A";
+      document.getElementById('ro-user-fb').innerText = u.facebookUrl || "N/A";
+      document.getElementById('ro-user-addr').innerText = u.address || "N/A";
+      
+      var badgeClass = (u.status && u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
+      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status || 'Active'}</span>`;
+      document.getElementById('ro-edit-link').onclick = () => openEditUserForm(u.rowIndex);
+    }).getUserById(rowIndex);
+  }
+
   // --- DRAG AND DROP REORDER LOGIC ---
   var draggedOpNoteIndex = null;
   function dragOpNoteStart(e, index) {
@@ -1109,18 +1264,14 @@
     
     renderOpNotesList(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes);
     
-    // Instead of forcing a full page reload for a reorder, we silently update the DB.
     google.script.run.updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
   }
 
   // --- INLINE EDIT NOTE LOGIC ---
   function editOpNote(index) {
-    // Hide text, show input
     document.getElementById('note-view-' + index).style.display = 'none';
     document.getElementById('note-edit-' + index).style.display = 'flex';
-    // Remove draggable to allow text selection without dragging
     document.getElementById('opnote-row-' + index).setAttribute('draggable', 'false');
-    
     var input = document.getElementById('note-input-' + index);
     input.focus();
   }
@@ -1129,8 +1280,6 @@
     document.getElementById('note-view-' + index).style.display = 'flex';
     document.getElementById('note-edit-' + index).style.display = 'none';
     document.getElementById('opnote-row-' + index).setAttribute('draggable', 'true');
-    
-    // Reset value
     var notes = [];
     try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
     if (notes[index]) {
@@ -1141,26 +1290,21 @@
   function saveOpNoteEdit(index) {
     var input = document.getElementById('note-input-' + index);
     var newContent = input.value.trim();
-    
     if (!newContent) {
       input.style.border = '1px solid var(--brand-red)';
       setTimeout(() => { input.style.border = '1px solid #ccc'; }, 2000);
       return; 
     }
-
     var notes = [];
     try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
     if (!notes[index]) return;
-
     if (notes[index].content === newContent) {
-       cancelOpNoteEdit(index); // No change, just close
+       cancelOpNoteEdit(index);
        return;
     }
-
     notes[index].content = newContent;
     notes[index].editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
     notes[index].timestamp = new Date().toISOString();
-
     window.CURRENT_VIEW_CLIENT_DATA.operationalNotes = JSON.stringify(notes);
     window.CURRENT_VIEW_CLIENT_DATA.editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
 
@@ -1194,30 +1338,24 @@
   function addQuickOpNote() {
     var input = document.getElementById('ro-quick-note-input');
     var content = input.value.trim();
-    
     if (!content) {
       input.style.border = '1px solid var(--brand-red)';
       setTimeout(() => { input.style.border = '1px solid #ccc'; }, 2000);
       return; 
     }
-    
     if (!window.CURRENT_VIEW_CLIENT_DATA) return;
-
     var btn = document.getElementById('ro-quick-note-btn');
     btn.innerText = "Saving...";
     btn.disabled = true;
     input.disabled = true;
-
     var newNote = {
       content: content,
       editor: typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User",
       timestamp: new Date().toISOString()
     };
-
     var notes = [];
     try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
     notes.push(newNote); 
-
     window.CURRENT_VIEW_CLIENT_DATA.operationalNotes = JSON.stringify(notes);
     window.CURRENT_VIEW_CLIENT_DATA.editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
 
@@ -1236,17 +1374,14 @@
     if (!container) return;
     var notes = [];
     try { notes = JSON.parse(notesJson || "[]"); } catch(e) {}
-
     if (notes.length === 0) {
       container.innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px; background:#fff; border:1px solid #eee; border-radius:4px;">No operational notes added yet.</p>';
       return;
     }
-
     var html = '';
     notes.forEach((note, index) => {
       var dateStr = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : 'Unknown Date';
       var contentEscaped = note.content ? note.content.replace(/"/g, '&quot;') : '';
-      
       html += `
         <div id="opnote-row-${index}" draggable="true" 
              ondragstart="dragOpNoteStart(event, ${index})" 
@@ -1255,7 +1390,6 @@
              ondragleave="this.style.border='1px solid #eee'; this.style.backgroundColor='#fff';"
              ondrop="this.style.border='1px solid #eee'; this.style.backgroundColor='#fff'; dropOpNote(event, ${index});"
              style="background: #fff; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative; transition: 0.2s;">
-           
            <div id="note-view-${index}" style="display:flex; align-items:center; gap: 10px;">
               <div style="color: #ccc; cursor: grab;" title="Drag to reorder">&#9776;</div>
               <div style="flex: 1; font-size: 14px; color: #333; cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;" 
@@ -1268,14 +1402,12 @@
                  Last edited by ${note.editor || 'Unknown'} on ${dateStr}
               </div>
            </div>
-
            <div id="note-edit-${index}" style="display:none; align-items:center; gap: 10px; width: 100%;">
               <div style="color: transparent; width: 14px;">&#9776;</div>
               <input type="text" id="note-input-${index}" class="form-control" value="${contentEscaped}" style="flex:1; margin: 0;">
               <button class="btn-primary" onclick="saveOpNoteEdit(${index})" style="padding: 6px 12px; font-size: 12px; flex-shrink: 0;">Save</button>
               <button class="btn-filter-toggle" onclick="cancelOpNoteEdit(${index})" style="padding: 6px 12px; font-size: 12px; background: transparent; border: 1px solid #ddd; flex-shrink: 0;">Cancel</button>
            </div>
-
         </div>
       `;
     });
@@ -1295,7 +1427,6 @@
             <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">${new Date(entry.timestamp).toLocaleString()}${editorName}</div>
             <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">`;
         entry.changes.forEach(change => { 
-          // Beautifully parsed JSON updates instead of raw strings
           if (change.old === "" && change.new.startsWith("Added")) {
              html += `<li style="margin-bottom: 4px;"><strong>${change.field}:</strong> <em style="color:#111;">${change.new}</em></li>`;
           } else if (change.new === "Removed") {
