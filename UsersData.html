@@ -51,7 +51,7 @@
           <div class="form-group">
             <label>Profile Photo</label>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="add-photo-preview" src="https://via.placeholder.com/100" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 1px solid #ddd;">
+              <img id="add-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 80px; height: 80px; min-width: 80px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 1px solid #ddd; background-color: #f9f9f9;">
               <input type="file" id="add-photo-input" accept="image/*" onchange="previewPhoto(this, 'add-photo-preview')">
             </div>
           </div>
@@ -60,7 +60,7 @@
           <div class="form-group"><label>Username *</label><input type="text" id="add-user-username" required class="form-control"></div>
           <div class="form-group"><label>Role *</label>
             <select id="add-user-role" required class="form-control">
-              <option value="Admin">Admin</option>
+              <option value="Administrator">Administrator</option>
               <option value="Account Manager">Account Manager</option>
               <option value="Account Support">Account Support</option>
               <option value="Sales Manager">Sales Manager</option>
@@ -109,7 +109,7 @@
         </div>
         <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="add-user-hired" class="form-control"></div></div>
       </div>
-      <div class="action-buttons"><button type="submit" class="btn-primary" id="add-user-submit">Create User</button></div>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;"><button type="submit" class="btn-primary" id="add-user-submit">Create User</button></div>
     </form>
     <div id="add-user-msg" class="status-msg"></div>
   </div>
@@ -127,7 +127,7 @@
           <div class="form-group">
             <label>Profile Photo</label>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="edt-photo-preview" src="https://via.placeholder.com/100" style="width: 80px; height: 80px; border-radius: 50%; object-fit: cover;">
+              <img id="edt-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 80px; height: 80px; min-width: 80px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 1px solid #ddd; background-color: #f9f9f9;">
               <input type="file" id="edt-photo-input" accept="image/*" onchange="previewPhoto(this, 'edt-photo-preview')">
             </div>
           </div>
@@ -136,7 +136,7 @@
           <div class="form-group"><label>Username</label><input type="text" id="edt-user-username" class="form-control" readonly style="background:#eee;"></div>
           <div class="form-group"><label>Role</label>
             <select id="edt-user-role" class="form-control">
-              <option value="Admin">Admin</option>
+              <option value="Administrator">Administrator</option>
               <option value="Account Manager">Account Manager</option>
               <option value="Account Support">Account Support</option>
               <option value="Sales Manager">Sales Manager</option>
@@ -185,7 +185,7 @@
         </div>
         <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="edt-user-hired" class="form-control"></div></div>
       </div>
-      <div class="action-buttons"><button type="submit" class="btn-primary" id="edt-user-submit">Update Profile</button></div>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;"><button type="submit" class="btn-primary" id="edt-user-submit">Update Profile</button></div>
     </form>
     <div id="edt-user-msg" class="status-msg"></div>
   </div>
@@ -195,11 +195,11 @@
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
     <div style="display: flex; gap: 30px; align-items: flex-start;">
-      <img id="ro-user-photo" src="https://via.placeholder.com/150" style="width: 150px; height: 150px; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1);">
+      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 150px; height: 150px; min-width: 150px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: #f9f9f9;">
       <div style="flex: 1;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
-          <button class="btn-edit" id="ro-edit-link">Edit Profile</button>
+          <button type="button" class="btn-edit" id="ro-edit-link">Edit Profile</button>
         </div>
         <p id="ro-user-role-pos" style="margin: 0; color: #666; font-weight: bold;"></p>
         <div id="ro-user-status-badge" style="margin-top: 10px;"></div>
@@ -226,18 +226,19 @@
 
 <script>
   /* --- UI HELPERS & IMAGE FIX --- */
+  var DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
   /** * Transforms Drive URLs into thumbnail links for cross-origin rendering.
    * Ensures profile photos show up in the hub.
    * @param {string} url - The raw Drive link from the sheet.
    */
   function getDirectImgUrl(url) {
-    if (!url || !url.includes("drive.google.com")) return url || 'https://via.placeholder.com/150';
+    if (!url || !url.includes("drive.google.com")) return url || DEFAULT_AVATAR;
     try {
       var id = url.match(/[-\w]{25,}/);
       if (id) return "https://drive.google.com/thumbnail?id=" + id[0] + "&sz=w500";
-    } catch (e) { return url; }
-    return url;
+    } catch (e) { return url || DEFAULT_AVATAR; }
+    return url || DEFAULT_AVATAR;
   }
 
   /** Toggles accordion panels */
@@ -245,6 +246,23 @@
     element.classList.toggle("active");
     var panel = element.nextElementSibling;
     panel.style.display = (panel.style.display === "block") ? "none" : "block";
+  }
+
+  /** Resets accordion panels so only the first one is open */
+  function resetAccordions(viewId) {
+    var view = document.getElementById(viewId);
+    if (!view) return;
+    var accordions = view.querySelectorAll('.accordion');
+    var panels = view.querySelectorAll('.panel');
+    for (var i = 0; i < accordions.length; i++) {
+      if (i === 0) {
+        accordions[i].classList.add('active');
+        panels[i].style.display = 'block';
+      } else {
+        accordions[i].classList.remove('active');
+        panels[i].style.display = 'none';
+      }
+    }
   }
 
   /** Formats date strings for HTML inputs */
@@ -321,10 +339,16 @@
 
   /** Opens add user form with clean state */
   function openAddUserForm() {
+    resetAccordions('addUserView');
     switchView('addUserView');
     document.getElementById('addUserForm').reset();
-    document.getElementById('add-photo-preview').src = 'https://via.placeholder.com/100';
-    document.getElementById('add-user-msg').innerHTML = '';
+    document.getElementById('add-photo-preview').src = DEFAULT_AVATAR;
+    
+    var msgEl = document.getElementById('add-user-msg');
+    if (msgEl) msgEl.innerHTML = '';
+    
+    var submitBtn = document.getElementById('add-user-submit');
+    if (submitBtn) submitBtn.disabled = false;
   }
 
   /** Submits 16 fields to backend */
@@ -332,7 +356,13 @@
     if(e) e.preventDefault();
     var btn = document.getElementById('add-user-submit');
     btn.disabled = true;
-    document.getElementById('add-user-msg').innerHTML = 'Creating user...';
+    
+    var msgEl = document.getElementById('add-user-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Creating user...';
+        msgEl.style.color = "var(--brand-grey)";
+    }
+    
     var obj = {
       username: document.getElementById('add-user-username').value,
       role: document.getElementById('add-user-role').value,
@@ -350,17 +380,50 @@
       status: document.getElementById('add-user-status').value,
       profilePhotoUrl: document.getElementById('add-photo-preview').src
     };
+    
     google.script.run.withSuccessHandler(function(res) {
-      document.getElementById('add-user-msg').innerHTML = res;
-      btn.disabled = false;
-      if (res.includes("Success")) setTimeout(() => switchView('usersListView'), 1500);
+      if (msgEl) {
+          msgEl.innerHTML = res;
+      }
+      
+      if (res.includes("Success")) {
+        if (msgEl) msgEl.style.color = "green";
+        setTimeout(() => {
+          // Fetch updated users and route to the new user's view-only profile
+          google.script.run.withSuccessHandler(function(users) {
+            populateUsersTable(users);
+            var newUser = users.find(u => u.username === obj.username);
+            if (newUser) {
+              openReadOnlyUser(newUser.rowIndex);
+            } else {
+              switchView('usersListView');
+            }
+            document.getElementById('addUserForm').reset();
+          }).getUsersList();
+        }, 1500);
+      } else {
+        if (msgEl) msgEl.style.color = "var(--brand-red)";
+        btn.disabled = false;
+      }
     }).processNewUser(obj);
   }
 
   /** Populates edit form with backend data */
   function openEditUserForm(rowIndex) {
+    resetAccordions('editUserView');
     switchView('editUserView');
+    
+    var msgEl = document.getElementById('edt-user-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Loading user data...';
+        msgEl.style.color = 'var(--brand-grey)';
+    }
+    
+    var submitBtn = document.getElementById('edt-user-submit');
+    if (submitBtn) submitBtn.disabled = false;
+    
     google.script.run.withSuccessHandler(function(u) {
+      if (msgEl) msgEl.innerHTML = '';
       document.getElementById('edt-user-rowIndex').value = u.rowIndex;
       document.getElementById('edt-user-username').value = u.username;
       document.getElementById('edt-user-role').value = u.role;
@@ -385,6 +448,13 @@
     if(e) e.preventDefault();
     var btn = document.getElementById('edt-user-submit');
     btn.disabled = true;
+    
+    var msgEl = document.getElementById('edt-user-msg');
+    if (msgEl) {
+        msgEl.innerHTML = 'Saving changes...';
+        msgEl.style.color = 'var(--brand-grey)';
+    }
+    
     var obj = {
       rowIndex: document.getElementById('edt-user-rowIndex').value,
       username: document.getElementById('edt-user-username').value,
@@ -403,10 +473,23 @@
       status: document.getElementById('edt-user-status').value,
       profilePhotoUrl: document.getElementById('edt-photo-preview').src
     };
+    
     google.script.run.withSuccessHandler(function(res) {
-      document.getElementById('edt-user-msg').innerHTML = res;
-      btn.disabled = false;
-      if (res.includes("Success")) setTimeout(() => switchView('usersListView'), 1500);
+      if (msgEl) {
+          msgEl.innerHTML = res;
+      }
+      
+      if (res.includes("Success")) {
+        if (msgEl) msgEl.style.color = "green";
+        setTimeout(() => {
+          // Sync changes quietly in the background and route to updated read-only profile
+          google.script.run.withSuccessHandler(populateUsersTable).getUsersList();
+          openReadOnlyUser(obj.rowIndex);
+        }, 1500);
+      } else {
+        if (msgEl) msgEl.style.color = "var(--brand-red)";
+        btn.disabled = false;
+      }
     }).updateUserRecord(obj);
   }
 

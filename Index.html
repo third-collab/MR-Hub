@@ -141,8 +141,8 @@
         if (secOp) secOp.style.display = 'none';
       }
     
-      // RESTORED: Access Conditions for Admin
-      if (CURRENT_USER_ROLE === 'Admin') {
+      // RESTORED: Access Conditions for Admin (Updated to Administrator)
+      if (CURRENT_USER_ROLE === 'Administrator') {
         var usersCard = document.getElementById('card-users');
         if (usersCard) usersCard.style.display = 'block';
         var healthCard = document.getElementById('card-healthPoints');
@@ -180,7 +180,7 @@
       dropdown.classList.toggle('show');
     }
 
-    // Close dropdowns when clicking outside [cite: 430]
+    // Close dropdowns when clicking outside
     document.addEventListener('click', function(event) {
       if (!event.target.closest('.custom-dropdown')) {
         document.querySelectorAll('.dropdown-content').forEach(function(content) { content.classList.remove('show'); });
@@ -188,7 +188,7 @@
     });
 
     /**
-     * Central navigation controller for view switching and data initialization. [cite: 431-446]
+     * Central navigation controller for view switching and data initialization.
      * @param {string} viewId - ID of the container to display.
      */
     function switchView(viewId) {
@@ -221,7 +221,7 @@
     }
     
     /**
-     * Renders the header calendar based on current date. [cite: 447-453]
+     * Renders the header calendar based on current date.
      */
     function renderCalendar() {
       var now = new Date();
@@ -241,7 +241,7 @@
     renderCalendar();
 
     /**
-     * Updates the digital clock in the header. [cite: 454-455]
+     * Updates the digital clock in the header.
      */
     function updateHeaderClock() {
       var now = new Date();
@@ -251,7 +251,7 @@
     setInterval(updateHeaderClock, 1000); updateHeaderClock();
 
     /**
-     * Toggles display of header utility popups (Calendar, Notifs, User). [cite: 456-458]
+     * Toggles display of header utility popups (Calendar, Notifs, User).
      * @param {string} id - DOM ID of the popup.
      */
     function togglePopup(id) {
@@ -260,11 +260,11 @@
       if (!isOpen) popup.style.display = 'block';
     }
     
-    // Global click listener to close popups [cite: 458]
+    // Global click listener to close popups
     document.addEventListener('click', function(e) { document.querySelectorAll('.header-popup').forEach(p => { p.style.display = 'none'; }); });
 
     /**
-     * Fetches recent notifications from backend and updates the UI. [cite: 459-462]
+     * Fetches recent notifications from backend and updates the UI.
      */
     function fetchNotifications() {
       var notifPopup = document.getElementById('notif-popup');
@@ -287,7 +287,7 @@
     }
 
     /**
-     * Navigates to the full notifications history page. [cite: 463]
+     * Navigates to the full notifications history page.
      */
     function openNotificationsPage() {
       document.getElementById('notif-popup').style.display = 'none'; 
@@ -296,7 +296,7 @@
     }
 
     /**
-     * Uses IntersectionObserver to auto-mark visible notifications as read. [cite: 464-467]
+     * Uses IntersectionObserver to auto-mark visible notifications as read.
      */
     function setupNotificationObserver() {
       var unreadItems = document.querySelectorAll('.notif-unread'); 
