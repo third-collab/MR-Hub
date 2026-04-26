@@ -114,9 +114,8 @@ function diffJson(oldJson, newJson, headerName, type) {
 
 /**
  * Fetches the summarized list of clients for the main table view.
- * Standardizes data for the frontend to include identifying indexes and 
- * Account Manager details.
- * * @return {Array<Object>} List of client objects with essential display fields.
+ * Standardizes data for the frontend to include identifying indexes and Account Manager details.
+ * @return {Array<Object>} List of client objects with essential display fields.
  */
 function getClientsList() {
   try {
@@ -151,7 +150,7 @@ function getClientsList() {
 /**
  * Fetches all details for a specific client by their spreadsheet row index.
  * Sanitizes raw Date objects to ISO strings to prevent data transport errors.
- * * @param {number} rowIndex The row index in the spreadsheet.
+ * @param {number} rowIndex The row index in the spreadsheet.
  * @return {Object} Detailed client record or error object.
  */
 function getClientById(rowIndex) {
@@ -221,7 +220,7 @@ function getClientById(rowIndex) {
 
 /**
  * Creates a new client record and triggers automated onboarding notifications.
- * * @param {Object} clientData The data object collected from the Add Client form.
+ * @param {Object} clientData The data object collected from the Add Client form.
  * @return {string} Confirmation or error message.
  */
 function processNewClient(clientData) {
@@ -259,6 +258,15 @@ function processNewClient(clientData) {
 
     sheet.appendRow(newRow);
 
+    // DIRECT NOTIFICATION CALL (Safeguards removed to guarantee execution)
+    var brand = clientData.brandName || clientData.companyName;
+    try { 
+      logNotification("Clients", "New Client", "A new client (" + brand + ") was added.", "All", ""); 
+    } catch(e) {
+      console.error("Failed to log notification: " + e.message);
+    }
+
+    // DIRECT EMAIL CALL (Safeguards removed to guarantee execution)
     var priContactFull = clientData.pFirstName + " " + clientData.pLastName;
     try {
       var clientDataMap = {
@@ -273,14 +281,14 @@ function processNewClient(clientData) {
         "notes": clientData.handoverNotes || ""
       };
 
-      if (clientData.pEmail && typeof sendTriggerEmail === "function") {
+      if (clientData.pEmail) {
         sendTriggerEmail("Client Welcome Email", clientData.pEmail, clientDataMap);
       }
-      if (typeof sendTriggerEmail === "function") {
-        sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
-      }
+      
+      sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
+      
     } catch(e) {
-      return "Success! Client onboarded, but automated emails failed: " + e.message;
+      return "Success! Client onboarded, but automated emails failed. Ensure 'Client Welcome Email' template is Active. Error: " + e.message;
     }
 
     return "Success! Client onboarded successfully.";
@@ -290,8 +298,8 @@ function processNewClient(clientData) {
 }
 
 /**
- * Updates an existing client record and generates an automated history log of changes.
- * * @param {Object} clientData The updated client object including the rowIndex.
+ * Updates an existing client record and generates an automated history log and smart notifications.
+ * @param {Object} clientData The updated client object including the rowIndex.
  * @return {string} Confirmation or error message.
  */
 function updateClientRecord(clientData) {
@@ -353,6 +361,17 @@ function updateClientRecord(clientData) {
     newRow[36] = clientData.brandFolder;       
     newRow[37] = clientData.remarks;           
 
+    // Notification flags
+    var notifyContactUpdated = false;
+    var notifyContractUpdated = false;
+    var notifyShipAddress = false;
+    var notifyRetAddress = false;
+    var notifyOpNoteAdded = false;
+    var notifyOpNoteUpdated = false;
+
+    // Contract Info fields mapping (excluding 17:Services, 20:Current Start Date)
+    var contractIndexes = [16, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]; 
+
     // Map which columns are JSON to trigger the deep field-level diff engine
     var jsonColumnsMap = {
       13: 'contacts',
@@ -373,12 +392,25 @@ function updateClientRecord(clientData) {
         var headerName = headers[i] || "Column " + (i+1);
         
         if (jsonColumnsMap[i]) {
-          // If it's a JSON column, process deep field-level edits using our engine
           var jChanges = diffJson(oldVal, newVal, headerName, jsonColumnsMap[i]);
           changes = changes.concat(jChanges);
+          
+          // Set notification flags based on JSON changes
+          if (i === 13 && jChanges.length > 0) notifyContactUpdated = true;
+          if (i === 14 && jChanges.length > 0) notifyShipAddress = true;
+          if (i === 15 && jChanges.length > 0) notifyRetAddress = true;
+          if (i === 32 && jChanges.length > 0) {
+             jChanges.forEach(function(c) {
+                if (c.new && String(c.new).startsWith("Added:")) notifyOpNoteAdded = true;
+                else if (c.new !== "Removed") notifyOpNoteUpdated = true;
+             });
+          }
         } else {
           // Standard text column comparison
           changes.push({ field: headerName, old: oldVal, new: newVal });
+          
+          if (i >= 6 && i <= 12) notifyContactUpdated = true;
+          if (contractIndexes.includes(i)) notifyContractUpdated = true;
         }
       }
     }
@@ -394,6 +426,41 @@ function updateClientRecord(clientData) {
       });
       newRow[38] = JSON.stringify(historyArray);
       newRow[0] = new Date(); 
+      
+      // -- DIRECT DISPATCH SYSTEM NOTIFICATIONS --
+      try {
+        var brand = clientData.brandName || clientData.companyName;
+        
+        // 1. Status Checks (Paused, Inactive/Offboarded, Resumed, Rejoined)
+        var oldStatus = String(oldRow[34]).trim() || "Active";
+        var newStatus = String(newRow[34]).trim();
+        if (oldStatus !== newStatus) {
+          if (newStatus === "Paused") logNotification("Clients", "Client Paused", brand + " has paused their services.", "All", "");
+          else if (newStatus === "Inactive") logNotification("Clients", "Client Offboarded", brand + " is now inactive (offboarded).", "All", "");
+          else if (oldStatus === "Inactive" && newStatus !== "Inactive") logNotification("Clients", "Client Rejoins", brand + " has rejoined (" + newStatus + ").", "All", "");
+          else if (oldStatus === "Paused" && newStatus !== "Paused") logNotification("Clients", "Client Resumes", brand + " has resumed their services (" + newStatus + ").", "All", "");
+        }
+
+        // 2. Services Changed
+        if (String(oldRow[17]).trim() !== String(newRow[17]).trim()) logNotification("Clients", "Services Changed", "The services of a client changed (" + brand + ").", "All", "");
+
+        // 3. Account Manager Assigned
+        if (String(oldRow[35]).trim() !== String(newRow[35]).trim()) logNotification("Clients", "Account Manager Assigned", "A new account manager was assigned to " + brand + ".", "All", "");
+
+        // 4. Brand Folder Changed
+        if (String(oldRow[36]).trim() !== String(newRow[36]).trim()) logNotification("Clients", "Brand Folder Changed", "The brand folder was changed for " + brand + ".", "All", "");
+
+        // 5. Flag-based Aggregated Updates
+        if (notifyOpNoteAdded) logNotification("Clients", "New Operational Note", "A new operational note was added for " + brand + ".", "All", "");
+        if (notifyOpNoteUpdated) logNotification("Clients", "Operational Note Updated", "An operational note was updated for " + brand + ".", "All", "");
+        if (notifyShipAddress) logNotification("Clients", "Shipping Address Updated", "A shipping address was added or updated for " + brand + ".", "All", "");
+        if (notifyRetAddress) logNotification("Clients", "Return Address Updated", "A return address was added or updated for " + brand + ".", "All", "");
+        if (notifyContactUpdated) logNotification("Clients", "Contact Info Updated", "A client's contact information was updated (" + brand + ").", "All", "");
+        if (notifyContractUpdated) logNotification("Clients", "Contract Info Updated", "Contract information was updated for " + brand + ".", "All", "");
+        
+      } catch(e) { 
+        console.error("Failed to process notifications: " + e.message);
+      }
     }
 
     sheet.getRange(rowIndex + 1, 1, 1, newRow.length).setValues([newRow]);

@@ -1,5 +1,21 @@
+<!-- 
+  Users Management Module - Frontend
+  Standardized under MR Hub Architecture Blueprint.
+  
+  CORE RESPONSIBILITIES:
+  - Staff Profile Management (Add/Edit/View).
+  - Role-Based Access Control (RBAC) synchronization.
+  - Profile Photo processing with bitmap compression.
+  
+  INTEGRITY FEATURES:
+  - Modular Loading Overlays for all async operations.
+  - Direct routing to specific user profiles after save.
+  - Strict 1:1 Aspect Ratio enforcement for all photo previews.
+  - Client-parity sorting logic and UI filters.
+-->
+
 <style>
-  /* Modular Loading Overlay for User Forms */
+  /* --- Modular Loading Overlay for User Forms and Profile --- */
   .user-loading-overlay {
     display: none;
     position: absolute;
@@ -12,21 +28,54 @@
     flex-direction: column;
     gap: 10px;
   }
-  .spinner {
+  .spinner-user {
     width: 40px;
     height: 40px;
     border: 4px solid #f3f3f3;
     border-top: 4px solid var(--brand-red);
     border-radius: 50%;
-    animation: spin 1s linear infinite;
+    animation: spin-user 1s linear infinite;
   }
-  @keyframes spin {
+  @keyframes spin-user {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  .form-wrapper { position: relative; } /* Ensure overlay centers correctly */
+
+  /* --- Layout & Photo Dimension Constraints --- */
+  #addUserView .form-wrapper, 
+  #editUserView .form-wrapper,
+  #readOnlyUserView .form-wrapper { 
+    position: relative; 
+    min-height: 400px;
+  }
+  
+  .profile-photo-square {
+    width: 80px; 
+    height: 80px; 
+    min-width: 80px; 
+    flex-shrink: 0; 
+    aspect-ratio: 1/1; 
+    border-radius: 10px; 
+    object-fit: cover; 
+    border: 1px solid #ddd; 
+    background-color: #f9f9f9;
+  }
+  
+  .profile-photo-large {
+    width: 150px; 
+    height: 150px; 
+    min-width: 150px; 
+    flex-shrink: 0; 
+    aspect-ratio: 1/1; 
+    border-radius: 10px; 
+    object-fit: cover; 
+    border: 4px solid #fff; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    background-color: #f9f9f9;
+  }
 </style>
 
+<!-- List View: Master User Directory -->
 <div id="usersListView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
   
@@ -37,7 +86,10 @@
 
   <div class="filter-wrapper">
     <input type="text" id="user-filter-search" class="filter-input" placeholder="Search users..." onkeyup="applyUserFilters()">
-    <button class="btn-filter-toggle" onclick="toggleFilter('user-adv')">Filters</button>
+    <button class="btn-filter-toggle" onclick="toggleFilter('user-adv')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+      Filters
+    </button>
     <div id="user-adv" class="filter-advanced" style="display:none;">
       <div class="custom-dropdown">
         <button class="dropdown-btn" onclick="toggleDropdown('user-status-drop')">Status ▼</button>
@@ -46,6 +98,7 @@
           <label><input type="checkbox" class="user-filter-status-cb" value="Inactive" onchange="applyUserFilters()"> Inactive</label>
         </div>
       </div>
+      <button type="button" class="btn-filter-toggle" onclick="resetUserFilters()" style="background: transparent; color: var(--brand-red); border: 1px solid var(--brand-red);">Reset</button>
     </div>
   </div>
 
@@ -53,26 +106,27 @@
     <table>
       <thead>
         <tr>
-          <th>Username</th>
-          <th>Name</th>
-          <th>Work Email</th>
-          <th>Role</th>
-          <th>Position</th>
-          <th>Status</th>
+          <th class="sortable" onclick="handleUserSort('username')">Username <span id="usort-username" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('fullName')">Name <span id="usort-fullName" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('workEmail')">Work Email <span id="usort-workEmail" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('role')">Role <span id="usort-role" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('position')">Position <span id="usort-position" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('status')">Status <span id="usort-status" class="sort-icon"></span></th>
           <th>Action</th>
         </tr>
       </thead>
       <tbody id="userTableBody">
-        <tr><td colspan="7" style="text-align:center; padding: 20px;">Loading users...</td></tr>
+        <tr><td colspan="7" style="text-align:center; padding: 30px;">Loading users...</td></tr>
       </tbody>
     </table>
   </div>
 </div>
 
+<!-- Add User Form -->
 <div id="addUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
-    <div id="add-user-overlay" class="user-loading-overlay"><div class="spinner"></div><span>Saving...</span></div>
+    <div id="add-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span>Creating User...</span></div>
     <h2 style="margin-top:0;">Add New System User</h2>
     <form id="addUserForm" onsubmit="handleAddUserSubmit(event)">
       <button type="button" class="accordion active" onclick="toggleAccordion(this)">Basic Credentials</button>
@@ -81,7 +135,7 @@
           <div class="form-group">
             <label>Profile Photo</label>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="add-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 80px; height: 80px; min-width: 80px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 1px solid #ddd; background-color: #f9f9f9;">
+              <img id="add-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-square">
               <input type="file" id="add-photo-input" accept="image/*" onchange="previewPhoto(this, 'add-photo-preview')">
             </div>
           </div>
@@ -145,10 +199,11 @@
   </div>
 </div>
 
+<!-- Edit User Form -->
 <div id="editUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
-    <div id="edt-user-overlay" class="user-loading-overlay"><div class="spinner"></div><span id="edt-overlay-text">Loading Data...</span></div>
+    <div id="edit-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span id="edt-overlay-text">Loading Data...</span></div>
     <h2 style="margin-top:0;">Edit User Profile</h2>
     <form id="editUserForm" onsubmit="handleEditUserSubmit(event)">
       <input type="hidden" id="edt-user-rowIndex">
@@ -158,7 +213,7 @@
           <div class="form-group">
             <label>Profile Photo</label>
             <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="edt-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 80px; height: 80px; min-width: 80px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 1px solid #ddd; background-color: #f9f9f9;">
+              <img id="edt-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-square">
               <input type="file" id="edt-photo-input" accept="image/*" onchange="previewPhoto(this, 'edt-photo-preview')">
             </div>
           </div>
@@ -222,11 +277,15 @@
   </div>
 </div>
 
+<!-- View User (Read-Only Profile) -->
 <div id="readOnlyUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
   <div class="form-wrapper">
+    <!-- Modular Loading Overlay for View Page -->
+    <div id="ro-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span>Loading Profile...</span></div>
+    
     <div style="display: flex; gap: 30px; align-items: flex-start;">
-      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 150px; height: 150px; min-width: 150px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: #f9f9f9;">
+      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-large">
       <div style="flex: 1;">
         <div style="display: flex; justify-content: space-between; align-items: flex-start;">
           <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
@@ -256,12 +315,12 @@
 </div>
 
 <script>
-  /* --- UI HELPERS & IMAGE FIX --- */
+  /* --- UI HELPERS & IMAGE PROCESSING --- */
   var DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
 
-  /** * Transforms Drive URLs into thumbnail links for cross-origin rendering.
-   * Ensures profile photos show up in the hub.
-   * @param {string} url - The raw Drive link from the sheet.
+  /**
+   * Translates Drive sharing URLs into direct thumbnail links.
+   * @param {string} url - The Drive URL from the sheet.
    */
   function getDirectImgUrl(url) {
     if (!url || !url.includes("drive.google.com")) return url || DEFAULT_AVATAR;
@@ -272,31 +331,43 @@
     return url || DEFAULT_AVATAR;
   }
 
-  /** Toggles accordion panels */
+  /** * Downscales bitmap images to ensure payloads fit server request limits.
+   */
+  function compressImage(base64Str, callback) {
+    var img = new Image();
+    img.src = base64Str;
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var width = img.width; var height = img.height;
+      var max = 500; 
+      if (width > height) { if (width > max) { height *= max / width; width = max; } } 
+      else { if (height > max) { width *= max / height; height = max; } }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/jpeg', 0.7)); 
+    };
+  }
+
   function toggleAccordion(element) {
     element.classList.toggle("active");
     var panel = element.nextElementSibling;
     panel.style.display = (panel.style.display === "block") ? "none" : "block";
   }
 
-  /** Resets accordion panels so only the first one is open */
+  /**
+   * Resets form accordions to standard view (first open, others closed).
+   */
   function resetAccordions(viewId) {
     var view = document.getElementById(viewId);
     if (!view) return;
     var accordions = view.querySelectorAll('.accordion');
     var panels = view.querySelectorAll('.panel');
     for (var i = 0; i < accordions.length; i++) {
-      if (i === 0) {
-        accordions[i].classList.add('active');
-        panels[i].style.display = 'block';
-      } else {
-        accordions[i].classList.remove('active');
-        panels[i].style.display = 'none';
-      }
+      if (i === 0) { accordions[i].classList.add('active'); panels[i].style.display = 'block'; } 
+      else { accordions[i].classList.remove('active'); panels[i].style.display = 'none'; }
     }
   }
 
-  /** Formats date strings for HTML inputs */
   function safelyFormatDate(dateStr) {
     if (!dateStr) return "";
     try {
@@ -306,7 +377,6 @@
     } catch(e) { return ""; }
   }
 
-  /** Real-time photo preview */
   function previewPhoto(input, previewId) {
     if (input.files && input.files[0]) {
       var reader = new FileReader();
@@ -315,42 +385,91 @@
     }
   }
 
-  /** Controls visibility of loading overlay */
-  function toggleOverlay(id, show, text) {
+  function toggleUserOverlay(id, show, text) {
     var overlay = document.getElementById(id);
     if (!overlay) return;
     overlay.style.display = show ? 'flex' : 'none';
-    if (text) {
-      var txtEl = overlay.querySelector('span');
-      if (txtEl) txtEl.innerText = text;
-    }
+    if (text) { var txtEl = overlay.querySelector('span'); if (txtEl) txtEl.innerText = text; }
   }
 
-  /* --- DATA FETCHING & RENDERING --- */
-  
+  /* ========================================================================
+     2. DATA FETCHING, SORTING & FILTERING
+     ======================================================================== 
+  */
   var GLOBAL_USER_DATA = [];
+  var CURRENT_USER_SORT_COLUMN = 'username'; 
+  var CURRENT_USER_SORT_DESC = false; 
 
-  /** Success handler for users fetch */
   function populateUsersTable(users) {
     GLOBAL_USER_DATA = users || [];
     applyUserFilters();
   }
 
-  /** Applies search and status filters */
+  function handleUserSort(column) {
+    if (CURRENT_USER_SORT_COLUMN === column) {
+      CURRENT_USER_SORT_DESC = !CURRENT_USER_SORT_DESC;
+    } else {
+      CURRENT_USER_SORT_COLUMN = column;
+      CURRENT_USER_SORT_DESC = false; 
+    }
+    applyUserFilters();
+  }
+
+  /** Resets User Filters to Default state */
+  function resetUserFilters() {
+    var searchEl = document.getElementById('user-filter-search');
+    if (searchEl) searchEl.value = '';
+    
+    var cbs = document.querySelectorAll('.user-filter-status-cb');
+    cbs.forEach(function(cb) {
+      cb.checked = (cb.value === 'Active');
+    });
+    
+    applyUserFilters();
+  }
+
   function applyUserFilters() {
     var searchEl = document.getElementById('user-filter-search');
     var search = searchEl ? searchEl.value.toLowerCase() : "";
     var checkedStatus = Array.from(document.querySelectorAll('.user-filter-status-cb:checked')).map(cb => cb.value);
+    
     var filtered = GLOBAL_USER_DATA.filter(function(u) {
       var fullname = ((u.firstName || "") + " " + (u.lastName || "")).toLowerCase();
       var matchSearch = u.username.toLowerCase().includes(search) || fullname.includes(search) || u.workEmail.toLowerCase().includes(search);
       var matchStatus = checkedStatus.length === 0 || checkedStatus.includes(u.status);
       return matchSearch && matchStatus;
     });
+
+    // Handle Sorting
+    filtered.sort(function(a, b) {
+      var valA = a[CURRENT_USER_SORT_COLUMN] || '';
+      var valB = b[CURRENT_USER_SORT_COLUMN] || '';
+      
+      if (CURRENT_USER_SORT_COLUMN === 'fullName') {
+        valA = (a.firstName || "") + " " + (a.lastName || "");
+        valB = (b.firstName || "") + " " + (b.lastName || "");
+      }
+      
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      
+      if (valA < valB) return CURRENT_USER_SORT_DESC ? 1 : -1;
+      if (valA > valB) return CURRENT_USER_SORT_DESC ? -1 : 1;
+      return 0;
+    });
+
+    // Reset Sort Icons
+    document.querySelectorAll('.sort-icon').forEach(function(icon) { 
+      if(icon.id.startsWith('usort-')) icon.innerHTML = ''; 
+    });
+    
+    // Set Active Sort Icon
+    var iconEl = document.getElementById('usort-' + CURRENT_USER_SORT_COLUMN);
+    if (iconEl) iconEl.innerHTML = CURRENT_USER_SORT_DESC ? '▼' : '▲';
+
     renderUserTableRows(filtered);
   }
 
-  /** Renders rows into the table body */
   function renderUserTableRows(users) {
     var tbody = document.getElementById('userTableBody');
     if (!tbody) return;
@@ -377,9 +496,11 @@
     });
   }
 
-  /* --- FORM SUBMISSIONS --- */
+  /* ========================================================================
+     3. FORM SUBMISSIONS (ADD & EDIT)
+     ======================================================================== 
+  */
 
-  /** Opens add user form with clean state */
   function openAddUserForm() {
     resetAccordions('addUserView');
     switchView('addUserView');
@@ -389,46 +510,48 @@
     var msgEl = document.getElementById('add-user-msg');
     if (msgEl) msgEl.innerHTML = '';
     
-    toggleOverlay('add-user-overlay', false);
+    toggleUserOverlay('add-user-overlay', false);
     
     var submitBtn = document.getElementById('add-user-submit');
     if (submitBtn) submitBtn.disabled = false;
   }
 
-  /** Submits 16 fields to backend with photo upload handling */
+  /**
+   * High-integrity Add User submission.
+   * Checks for new photo bitmaps and compresses them before upload.
+   */
   function handleAddUserSubmit(e) {
     if(e) e.preventDefault();
     var btn = document.getElementById('add-user-submit');
     btn.disabled = true;
     
-    toggleOverlay('add-user-overlay', true, 'Creating User...');
+    toggleUserOverlay('add-user-overlay', true, 'Processing Image...');
     
     var msgEl = document.getElementById('add-user-msg');
-    if (msgEl) {
-        msgEl.innerHTML = '';
-    }
+    if (msgEl) { msgEl.innerHTML = ''; }
     
     var photoSrc = document.getElementById('add-photo-preview').src;
     var username = document.getElementById('add-user-username').value;
     
-    // Check if new photo was selected (Base64)
-    if (photoSrc.startsWith('data:image')) {
-      toggleOverlay('add-user-overlay', true, 'Uploading Photo...');
-      google.script.run.withSuccessHandler(function(url) {
-        if (url.startsWith("Error")) {
-          toggleOverlay('add-user-overlay', false);
-          if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
-          btn.disabled = false;
-          return;
-        }
-        submitAddUser(url);
-      }).uploadProfilePhoto(photoSrc, username + "_profile.png");
+    // Only upload if base64 bitmap is present, skipping default SVG icon
+    if (photoSrc.startsWith('data:image') && photoSrc.includes(';base64,')) {
+      compressImage(photoSrc, function(compressed) {
+        google.script.run.withSuccessHandler(function(url) {
+          if (url.startsWith("Error")) {
+            toggleUserOverlay('add-user-overlay', false);
+            if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
+            btn.disabled = false;
+            return;
+          }
+          submitAddUser(url);
+        }).uploadProfilePhoto(compressed, username + "_profile.png");
+      });
     } else {
       submitAddUser(photoSrc);
     }
 
     function submitAddUser(finalPhotoUrl) {
-      toggleOverlay('add-user-overlay', true, 'Saving Record...');
+      toggleUserOverlay('add-user-overlay', true, 'Creating User...');
       var obj = {
         username: username,
         role: document.getElementById('add-user-role').value,
@@ -448,12 +571,13 @@
       };
       
       google.script.run.withSuccessHandler(function(res) {
-        toggleOverlay('add-user-overlay', false);
+        toggleUserOverlay('add-user-overlay', false);
         if (msgEl) msgEl.innerHTML = res;
         
         if (res.includes("Success")) {
           if (msgEl) msgEl.style.color = "green";
           setTimeout(() => {
+            // Fetch updated users and route to the new user's view-only profile
             google.script.run.withSuccessHandler(function(users) {
               populateUsersTable(users);
               var newUser = users.find(u => u.username === obj.username);
@@ -473,25 +597,25 @@
     }
   }
 
-  /** Populates edit form with backend data */
+  /** Populates edit form with backend data and clears previous state */
   function openEditUserForm(rowIndex) {
     resetAccordions('editUserView');
     switchView('editUserView');
     
-    // Clear previous state immediately
+    // Clear previous state immediately to prevent ghosting
     document.getElementById('editUserForm').reset();
     document.getElementById('edt-photo-preview').src = DEFAULT_AVATAR;
     
     var msgEl = document.getElementById('edt-user-msg');
     if (msgEl) msgEl.innerHTML = '';
     
-    toggleOverlay('edt-user-overlay', true, 'Loading Data...');
+    toggleUserOverlay('edit-user-overlay', true, 'Loading Data...');
     
     var submitBtn = document.getElementById('edt-user-submit');
     if (submitBtn) submitBtn.disabled = true;
     
     google.script.run.withSuccessHandler(function(u) {
-      toggleOverlay('edt-user-overlay', false);
+      toggleUserOverlay('edit-user-overlay', false);
       document.getElementById('edt-user-rowIndex').value = u.rowIndex;
       document.getElementById('edt-user-username').value = u.username;
       document.getElementById('edt-user-role').value = u.role;
@@ -513,13 +637,13 @@
     }).getUserById(rowIndex);
   }
 
-  /** Submits profile updates with photo upload handling */
+  /** Submits profile updates with photo upload handling and direct profile routing */
   function handleEditUserSubmit(e) {
     if(e) e.preventDefault();
     var btn = document.getElementById('edt-user-submit');
     btn.disabled = true;
     
-    toggleOverlay('edt-user-overlay', true, 'Saving Changes...');
+    toggleUserOverlay('edit-user-overlay', true, 'Processing Image...');
 
     var msgEl = document.getElementById('edt-user-msg');
     if (msgEl) msgEl.innerHTML = '';
@@ -528,24 +652,25 @@
     var username = document.getElementById('edt-user-username').value;
     var rowIndex = document.getElementById('edt-user-rowIndex').value;
 
-    // Check if new photo was selected (Base64)
-    if (photoSrc.startsWith('data:image')) {
-      toggleOverlay('edt-user-overlay', true, 'Uploading New Photo...');
-      google.script.run.withSuccessHandler(function(url) {
-        if (url.startsWith("Error")) {
-          toggleOverlay('edt-user-overlay', false);
-          if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
-          btn.disabled = false;
-          return;
-        }
-        submitEditUser(url);
-      }).uploadProfilePhoto(photoSrc, username + "_profile.png");
+    // Check if new photo was selected (Base64 bitmap, not the default SVG)
+    if (photoSrc.startsWith('data:image') && photoSrc.includes(';base64,')) {
+      compressImage(photoSrc, function(compressed) {
+        google.script.run.withSuccessHandler(function(url) {
+          if (url.startsWith("Error")) {
+            toggleUserOverlay('edit-user-overlay', false);
+            if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
+            btn.disabled = false;
+            return;
+          }
+          submitEditUser(url);
+        }).uploadProfilePhoto(compressed, username + "_profile.png");
+      });
     } else {
       submitEditUser(photoSrc);
     }
 
     function submitEditUser(finalPhotoUrl) {
-      toggleOverlay('edt-user-overlay', true, 'Updating Record...');
+      toggleUserOverlay('edit-user-overlay', true, 'Updating Record...');
       var obj = {
         rowIndex: rowIndex,
         username: username,
@@ -566,13 +691,13 @@
       };
       
       google.script.run.withSuccessHandler(function(res) {
-        toggleOverlay('edt-user-overlay', false);
+        toggleUserOverlay('edit-user-overlay', false);
         if (msgEl) msgEl.innerHTML = res;
         
         if (res.includes("Success")) {
           if (msgEl) msgEl.style.color = "green";
           setTimeout(() => {
-            // Sync changes quietly in the background and route to updated read-only profile
+            // Sync changes and route to updated read-only profile
             google.script.run.withSuccessHandler(function(users) {
               populateUsersTable(users);
               openReadOnlyUser(obj.rowIndex);
@@ -586,15 +711,37 @@
     }
   }
 
-  /** Populates read-only view */
+  /* ========================================================================
+     4. READ ONLY VIEW logic
+     ======================================================================== 
+  */
+
+  /** Populates read-only user view with loading overlay and clears ghost text */
   function openReadOnlyUser(rowIndex) {
     switchView('readOnlyUserView');
-    // Clear view immediately while loading
+    
+    // Clear view immediately while loading to ensure no ghost data
     document.getElementById('ro-user-photo').src = DEFAULT_AVATAR;
-    document.getElementById('ro-user-fullname').innerText = 'Loading...';
+    document.getElementById('ro-user-fullname').innerText = ''; 
     document.getElementById('ro-user-role-pos').innerText = '';
+    document.getElementById('ro-user-status-badge').innerHTML = '';
+    
+    // Detailed grid items clearing
+    document.getElementById('ro-user-username').innerText = '';
+    document.getElementById('ro-user-email').innerText = '';
+    document.getElementById('ro-user-pemail').innerText = '';
+    document.getElementById('ro-user-phone').innerText = '';
+    document.getElementById('ro-user-hired').innerText = '';
+    document.getElementById('ro-user-emptype').innerText = '';
+    document.getElementById('ro-user-bday').innerText = '';
+    document.getElementById('ro-user-fb').innerText = '';
+    document.getElementById('ro-user-addr').innerText = '';
+    
+    toggleUserOverlay('ro-user-overlay', true, 'Loading Profile...');
     
     google.script.run.withSuccessHandler(function(u) {
+      toggleUserOverlay('ro-user-overlay', false);
+      
       document.getElementById('ro-user-photo').src = getDirectImgUrl(u.profilePhotoUrl);
       document.getElementById('ro-user-fullname').innerText = (u.firstName || "") + " " + (u.lastName || "");
       document.getElementById('ro-user-role-pos').innerText = u.role + " | " + u.position;
@@ -607,8 +754,9 @@
       document.getElementById('ro-user-bday').innerText = u.birthday || "N/A";
       document.getElementById('ro-user-fb').innerText = u.facebookUrl || "N/A";
       document.getElementById('ro-user-addr').innerText = u.address || "N/A";
-      var badgeClass = (u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
-      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status}</span>`;
+      
+      var badgeClass = (u.status && u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
+      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status || 'Active'}</span>`;
       document.getElementById('ro-edit-link').onclick = () => openEditUserForm(u.rowIndex);
     }).getUserById(rowIndex);
   }

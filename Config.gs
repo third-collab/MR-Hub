@@ -1,25 +1,46 @@
 /**
- * GLOBAL DATABASE IDs
- * These unique identifiers link the MR Hub application to its respective 
- * Google Sheet databases.
+ * Configuration Module - Backend
+ * Standardized under MR Hub Architecture Blueprint.
+ * Dynamically retrieves Database IDs from Script Properties.
  */
-var MAIN_DB_ID = "1MZgzUsoYfJgIBu40k-hJO2JCt2sI_lSFOeH4eeZCu9A"; 
-var NOTIF_DB_ID = "1fy7o8odkCrrrv4S0iy67KT3Rsz9OwbCSgPCqoSwKoMw";
 
 /**
  * Helper function to retrieve the main spreadsheet database object.
- * Use this instead of SpreadsheetApp.getActiveSpreadsheet() to ensure 
- * consistent database targeting.
- * * @return {SpreadsheetApp.Spreadsheet} The main database spreadsheet object.
+ * Fetches the ID from ScriptProperties.
+ * Throws a specific error if the system has not been installed/configured.
+ * @return {SpreadsheetApp.Spreadsheet} The main database spreadsheet object.
  */
 function getMainDb() {
-  return SpreadsheetApp.openById(MAIN_DB_ID);
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('DATABASE_ID');
+  
+  if (!id) {
+    throw new Error("Configuration Error: Main Database ID is missing. Please run the System Installation or configure the ID in Settings.");
+  }
+  
+  try {
+    return SpreadsheetApp.openById(id);
+  } catch (e) {
+    throw new Error("System Error: Unable to open Main Database. Verify that the ID in Settings is correct and that the system has access to the file.");
+  }
 }
 
 /**
  * Helper function to retrieve the notification spreadsheet database object.
- * * @return {SpreadsheetApp.Spreadsheet} The notification database spreadsheet object.
+ * Fetches the ID from ScriptProperties.
+ * @return {SpreadsheetApp.Spreadsheet} The notification database spreadsheet object.
  */
 function getNotifDb() {
-  return SpreadsheetApp.openById(NOTIF_DB_ID);
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('NOTIF_DATABASE_ID');
+  
+  if (!id) {
+    throw new Error("Configuration Error: Notification Database ID is missing. Please run the System Installation.");
+  }
+  
+  try {
+    return SpreadsheetApp.openById(id);
+  } catch (e) {
+    throw new Error("System Error: Unable to open Notification Database. Verify that the file exists and is accessible.");
+  }
 }

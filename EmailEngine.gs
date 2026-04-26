@@ -1,6 +1,7 @@
 /**
- * Core engine for merging email wrappers with template content and sending 
- * automated notifications.
+ * Email Engine - Backend
+ * Standardized under MR Hub Architecture Blueprint.
+ * Handles: Template merging, placeholder swapping, and environment-based routing.
  */
 
 /**
@@ -15,7 +16,7 @@ function getWrapperContent(type) {
 
 /**
  * Merges the designated wrapper and body content for the UI template preview.
- * Includes a fix to swap CID references for public URLs so images render in browsers.
+ * Swaps CID references for live URLs (SVG or Drive Thumbnail) so images render in the browser.
  * @param {number} rowIndex - The row index of the template in the spreadsheet.
  * @return {string} The fully rendered HTML string.
  */
@@ -30,30 +31,60 @@ function getRenderedTemplatePreview(rowIndex) {
   var wrapperHtml = getWrapperContent(wrapperType);
   var fullHtml = wrapperHtml.replace("{{USER_MESSAGE_CONTENT}}", rawHtml);
   
-  // Blueprint Fix: Replaces CID with actual URL so the browser preview shows the logo
-  fullHtml = fullHtml.replace(/src="cid:logo"/g, 'src="https://i.imgur.com/nHCetrv.png"');
+  // Use centralized settings to find the correct logo for browser display
+  var settings = getSystemSettings();
+  var defaultSvgLogo = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='20' fill='%23C40004'/%3E%3Ctext x='50' y='65' font-family='Arial' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EMR%3C/text%3E%3C/svg%3E";
+  
+  // Browser preview can render SVG; if no Drive logo exists, use the SVG
+  var displayLogoUrl = settings.systemLogoId ? settings.systemLogoUrl : defaultSvgLogo;
+  
+  // Replace CID with the dynamic URL for browser rendering
+  fullHtml = fullHtml.replace(/src="cid:logo"/g, 'src="' + displayLogoUrl + '"');
   return fullHtml;
 }
 
 /**
- * Helper to retrieve the standard system logo as a blob for email attachments.
+ * Helper to retrieve the system logo as a blob for email attachments.
+ * Priority: 1. Drive Logo, 2. Fallback URL (Centralized logic).
  * @return {Blob} The logo image blob.
  */
 function getLogoBlob() {
-  var logoUrl = "https://i.imgur.com/nHCetrv.png";
-  return UrlFetchApp.fetch(logoUrl).getBlob().setName("logo");
+  var settings = getSystemSettings();
+  
+  // 1. Try Custom Uploaded Logo from Drive
+  if (settings.systemLogoId) {
+    try {
+      return DriveApp.getFileById(settings.systemLogoId).getBlob().setName("logo");
+    } catch(e) {
+      console.warn("Drive logo fetch failed, proceeding to fallback: " + e.message);
+    }
+  }
+  
+  // 2. Use Centralized Fallback URL 
+  // (The Imgur URL failsafe is managed once in Settings.gs:getSystemSettings)
+  try {
+    return UrlFetchApp.fetch(settings.fallbackLogoUrl).getBlob().setName("logo");
+  } catch(e) {
+    console.error("Critical: All logo blob fetches failed: " + e.message);
+    // Return an empty transparent pixel or empty blob to prevent MailApp crash
+    return Utilities.newBlob("", "image/png", "logo");
+  }
 }
 
 /**
  * Sends an automated email based on a Trigger Event mapped in the Templates database.
- * Merges user data into placeholders and attaches the system logo as an inline image.
- * @param {string} triggerName - The name of the trigger (e.g., "Client Welcome Email").
- * @param {string} toEmail - The recipient's email address.
- * @param {object} dataMap - Key-value pairs matching the {{placeholders}} in the template.
+ * Merges user data, applies Sandbox overrides, and attaches branding.
+ * @param {string} triggerName - The name of the trigger event.
+ * @param {string} toEmail - The intended recipient's email address.
+ * @param {object} dataMap - Key-value pairs for {{placeholders}}.
  */
 function sendTriggerEmail(triggerName, toEmail, dataMap) {
   var sheet = getMainDb().getSheetByName("Templates");
   var data = sheet.getDataRange().getValues();
+  
+  // Fetch system-wide branding and environment settings
+  var settings = getSystemSettings();
+  var sysName = settings.systemName;
   
   var subject = "";
   var templateFound = false;
@@ -84,7 +115,7 @@ function sendTriggerEmail(triggerName, toEmail, dataMap) {
   var wrapperHtml = getWrapperContent(wrapperType);
   var fullLayoutHtml = wrapperHtml.replace("{{USER_MESSAGE_CONTENT}}", rawHtml);
 
-  // 2. Perform Placeholder Swap over subject and body
+  // 2. Perform Placeholder Swap
   var finalSubject = subject;
   var finalHtml = fullLayoutHtml;
   
@@ -95,13 +126,34 @@ function sendTriggerEmail(triggerName, toEmail, dataMap) {
     finalHtml = finalHtml.replace(regex, replacement);
   }
 
-  // 3. Dispatch Email
+  // 3. Sandbox Environment Interceptor
+  var finalToEmail = toEmail;
+
+  if (settings.environment === 'Sandbox' && settings.adminEmail !== '') {
+    finalToEmail = settings.adminEmail;
+    finalSubject = "[Sandbox Mail] " + finalSubject;
+    
+    // Aggressive "program code" block for the override notification
+    var sandboxWarning = "<br><br><div style='padding: 20px; background-color: #000; color: #0f0; font-family: \"Courier New\", Courier, monospace; font-size: 14px; border: 2px solid #333; margin-top: 50px;'>";
+    sandboxWarning += "=========================================<br>";
+    sandboxWarning += " SYSTEM OVERRIDE: SANDBOX ENVIRONMENT    <br>";
+    sandboxWarning += "=========================================<br>";
+    sandboxWarning += "&gt; STATUS: INTERCEPTED<br>";
+    sandboxWarning += "&gt; INTENDED RECIPIENT(S): " + toEmail + "<br>";
+    sandboxWarning += "&gt; REROUTED TO ADMIN: " + settings.adminEmail + "<br>";
+    sandboxWarning += "=========================================";
+    sandboxWarning += "</div>";
+    
+    finalHtml += sandboxWarning;
+  }
+
+  // 4. Dispatch Email
   MailApp.sendEmail({
-    to: toEmail,
+    to: finalToEmail,
     subject: finalSubject,
     htmlBody: finalHtml,
     noReply: true,
-    name: "MegaRhino",
+    name: sysName,
     inlineImages: {
       logo: logoBlob 
     }
@@ -109,11 +161,10 @@ function sendTriggerEmail(triggerName, toEmail, dataMap) {
 }
 
 /**
- * Fetches a template, applies comprehensive dummy test data, and sends a test email.
- * Used for verifying layout and placeholder rendering during template creation.
- * @param {number} rowIndex - The row index of the template to test.
- * @param {string} testEmail - The email address to receive the test.
- * @return {string} Status message indicating success or failure.
+ * Sends a test email with dummy data for template verification.
+ * @param {number} rowIndex - Template row index.
+ * @param {string} testEmail - Recipient for the test.
+ * @return {string} Success or failure message.
  */
 function sendTestEmailAction(rowIndex, testEmail) {
   var sheet = getMainDb().getSheetByName("Templates");
@@ -121,6 +172,7 @@ function sendTestEmailAction(rowIndex, testEmail) {
   
   if (rowIndex < 1 || rowIndex >= data.length) return "Error: Template not found.";
   
+  var settings = getSystemSettings();
   var rowData = data[rowIndex];
   var subject = rowData[6] || "No Subject";
   var rawHtml = rowData[7] || "";
@@ -129,7 +181,7 @@ function sendTestEmailAction(rowIndex, testEmail) {
   var wrapperHtml = getWrapperContent(wrapperType);
   var fullLayoutHtml = wrapperHtml.replace("{{USER_MESSAGE_CONTENT}}", rawHtml);
 
-  // Define Standard Dummy Data for all possible placeholders
+  // Comprehensive Dummy Data
   var dummyData = {
     "companyName": "Acme Corp (Test)",
     "brandName": "Acme Brand",
@@ -138,24 +190,14 @@ function sendTestEmailAction(rowIndex, testEmail) {
     "priFirstName": "John",
     "priLastName": "Doe",
     "priEmail": "john@example.com",
-    "secFirstName": "Jane",
-    "secLastName": "Smith",
-    "secEmail": "jane@example.com",
-    "terFirstName": "Bob",
-    "terLastName": "Brown",
-    "terEmail": "bob@example.com",
     "monthlyContractValue": "$2,500",
     "contractStartDate": "2026-05-01",
     "services": "SEO & Content Marketing",
-    "notes": "This is a sample test note for preview purposes.",
-    "userId": "USR-999",
+    "notes": "Sample test note.",
     "username": "jdoe",
     "firstName": "John",
     "lastName": "Doe",
-    "email": "john.doe@example.com",
-    "role": "Account Manager",
-    "birthday": "January 1st",
-    "hireDate": "January 1, 2022"
+    "role": "Account Manager"
   };
 
   var finalSubject = "[TEST] " + subject;
@@ -173,7 +215,7 @@ function sendTestEmailAction(rowIndex, testEmail) {
       subject: finalSubject,
       htmlBody: finalHtml,
       noReply: true,
-      name: "MegaRhino",
+      name: settings.systemName,
       inlineImages: {
         logo: getLogoBlob()
       }

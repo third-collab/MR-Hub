@@ -1,5 +1,21 @@
+<!-- 
+  Clients Management Module - Frontend
+  Standardized under MR Hub Architecture Blueprint.
+  
+  CORE RESPONSIBILITIES:
+  - Master Client Database Management (Add/Edit/View).
+  - Contract, Service, and Contact Data tracking.
+  - Handover and Operational Notes Management.
+  
+  INTEGRITY FEATURES:
+  - Modular Loading Overlays for async operations.
+  - Deep JSON diffing for exact field-level audit trails.
+  - Inline Note Editing seamlessly combined with Drag/Drop Reordering.
+  - Comprehensive filter reset functionality and sorting.
+-->
+
 <style>
-  /* Modular Loading Overlay for Client Forms */
+  /* --- Modular Loading Overlay for Client Forms --- */
   .client-loading-overlay {
     display: none;
     position: absolute;
@@ -24,13 +40,16 @@
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
   }
-  /* Ensure wrappers are positioned for overlays */
+  /* Ensure wrappers are positioned for overlays and have a min-height while loading */
   #addClientView .form-wrapper, 
   #editClientView .form-wrapper,
-  #readOnlyUserView .form-wrapper,
-  #readOnlyClientView .form-wrapper { position: relative; }
+  #readOnlyClientView .form-wrapper { 
+    position: relative; 
+    min-height: 300px;
+  }
 </style>
 
+<!-- List View: Master Client Directory -->
 <div id="clientListView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
   
@@ -70,6 +89,7 @@
         <button class="dropdown-btn" onclick="toggleDropdown('client-am-drop')">Account Manager ▼</button>
         <div class="dropdown-content" id="client-am-drop"></div>
       </div>
+      <button type="button" class="btn-filter-toggle" onclick="resetClientFilters()" style="background: transparent; color: var(--brand-red); border: 1px solid var(--brand-red);">Reset</button>
     </div>
   </div>
 
@@ -92,10 +112,7 @@
   </div>
 </div>
 
-<div id="addUserView" class="container" style="display: none;">
-  <!-- This view is managed in UsersData.html -->
-</div>
-
+<!-- Add Client Form -->
 <div id="addClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   <div class="form-wrapper">
@@ -203,6 +220,7 @@
   </div>
 </div>
 
+<!-- Edit Client Form -->
 <div id="editClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   <div class="form-wrapper">
@@ -405,47 +423,11 @@
   </div>
 </div>
 
-<div id="readOnlyUserView" class="container" style="display: none;">
-  <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
-  <div class="form-wrapper">
-    <!-- NEW: Loading Overlay for User Profile View -->
-    <div id="ro-user-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Loading Profile...</span></div>
-    
-    <div style="display: flex; gap: 30px; align-items: flex-start;">
-      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" style="width: 150px; height: 150px; min-width: 150px; flex-shrink: 0; aspect-ratio: 1/1; border-radius: 10px; object-fit: cover; border: 4px solid #fff; box-shadow: 0 4px 10px rgba(0,0,0,0.1); background-color: #f9f9f9;">
-      <div style="flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
-          <button type="button" class="btn-edit" id="ro-edit-link">Edit Profile</button>
-        </div>
-        <p id="ro-user-role-pos" style="margin: 0; color: #666; font-weight: bold;"></p>
-        <div id="ro-user-status-badge" style="margin-top: 10px;"></div>
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
-          <div>
-            <p><strong>Username:</strong> <span id="ro-user-username"></span></p>
-            <p><strong>Work Email:</strong> <span id="ro-user-email"></span></p>
-            <p><strong>Personal Email:</strong> <span id="ro-user-pemail"></span></p>
-            <p><strong>Phone:</strong> <span id="ro-user-phone"></span></p>
-          </div>
-          <div>
-            <p><strong>Hire Date:</strong> <span id="ro-user-hired"></span></p>
-            <p><strong>Employment Type:</strong> <span id="ro-user-emptype"></span></p>
-            <p><strong>Birthday:</strong> <span id="ro-user-bday"></span></p>
-            <p><strong>Facebook:</strong> <span id="ro-user-fb"></span></p>
-          </div>
-        </div>
-        <p style="margin-top:15px;"><strong>Home Address:</strong> <span id="ro-user-addr"></span></p>
-      </div>
-    </div>
-  </div>
-</div>
-
+<!-- View Client (Read-Only Profile) -->
 <div id="readOnlyClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
   
   <div class="form-wrapper" style="max-width: 900px; margin-top: 0;">
-    <!-- NEW: Loading Overlay for Client Profile View -->
     <div id="ro-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Loading Client Profile...</span></div>
     <div id="ro-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; border-bottom: 2px solid #E3E3E3; padding-bottom: 15px;">
        <h2 id="ro-title" style="margin:0; color: var(--brand-grey);"></h2>
@@ -473,12 +455,10 @@
       
       <div id="ro-opnotes-list"></div>
 
-      <!-- Add Note Trigger Row -->
       <div id="ro-add-note-trigger" onclick="showQuickNoteInput()" onmouseover="this.style.backgroundColor='#fff5f5'" onmouseout="this.style.backgroundColor='#fff'" style="background: #fff; border: 2px dashed #ccc; padding: 15px; margin-bottom: 10px; border-radius: 4px; cursor: pointer; text-align: center; color: var(--brand-red); font-weight: bold; transition: 0.2s;">
         + Add Note
       </div>
 
-      <!-- Quick Note Input Area -->
       <div id="ro-quick-note-area" style="display: none; gap:10px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 4px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-items: center;">
         <input type="text" id="ro-quick-note-input" class="form-control" placeholder="Type a new operational note here..." style="flex:1;">
         <button id="ro-quick-note-btn" class="btn-primary" onclick="addQuickOpNote()" style="flex-shrink: 0;">Save Note</button>
@@ -498,6 +478,12 @@
   /* ========================================================================
      1. UI, NAVIGATION & ACCORDIONS
      ======================================================================== */
+
+  /**
+   * Toggles the visibility of accordion panels within forms.
+   * Also re-initializes Quill editors if the specific panel containing them is opened.
+   * @param {HTMLElement} element - The clicked accordion button.
+   */
   function toggleAccordion(element) {
     element.classList.toggle("active");
     var panel = element.nextElementSibling;
@@ -509,6 +495,11 @@
     }
   }
 
+  /**
+   * Resets all accordion panels in a specified view to their default state
+   * (Top accordion open, all others closed).
+   * @param {string} viewId - The DOM ID of the container view.
+   */
   function resetAccordions(viewId) {
     var view = document.getElementById(viewId);
     if (!view) return;
@@ -525,6 +516,12 @@
     }
   }
 
+  /**
+   * Navigates between the internal tabs (Overview, Contacts, History, etc.)
+   * within a specific Client profile view.
+   * @param {string} prefix - View prefix ('ro', 'add', 'edt').
+   * @param {string} tabId - Target tab identifier.
+   */
   function navigateClientTab(prefix, tabId) {
     var containerId = (prefix === 'ro') ? 'readOnlyClientView' : (prefix === 'add') ? 'addClientView' : 'editClientView';
     var view = document.getElementById(containerId);
@@ -545,7 +542,12 @@
     }
   }
 
-  /** Controls visibility of loading overlay for clients */
+  /**
+   * Controls the visibility of the semi-transparent loading overlay for Client forms.
+   * @param {string} id - The DOM ID of the overlay element.
+   * @param {boolean} show - True to display, false to hide.
+   * @param {string} text - Optional text to display alongside the spinner.
+   */
   function toggleClientOverlay(id, show, text) {
     var overlay = document.getElementById(id);
     if (!overlay) return;
@@ -561,6 +563,10 @@
      ======================================================================== */
   var addClientQuill, editClientQuill;
   
+  /**
+   * Initializes Quill rich text editors for Handover Notes if they haven't 
+   * been initialized yet. Prevents double-instantiation errors.
+   */
   function initClientEditors() {
     if (typeof Quill !== 'undefined') {
       try {
@@ -576,6 +582,11 @@
     }
   }
 
+  /**
+   * Safely parses and formats date strings into YYYY-MM-DD format suitable for HTML5 date inputs.
+   * @param {string} dateStr - Raw date string from backend.
+   * @returns {string} Formatted date string or empty string if invalid.
+   */
   function safelyFormatDate(dateStr) {
     if (!dateStr) return "";
     try {
@@ -588,6 +599,12 @@
   /* ========================================================================
      3. DYNAMIC JSON ROWS (Contacts, Addresses, OpNotes)
      ======================================================================== */
+
+  /**
+   * Appends a new, empty (or pre-filled) Contact row to the specified container.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
   function addContactRow(containerId, data = {}) {
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -613,6 +630,11 @@
     container.appendChild(row);
   }
 
+  /**
+   * Appends a new, empty (or pre-filled) Address row to the specified container.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
   function addAddressRow(containerId, data = {}) {
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -643,6 +665,12 @@
     container.appendChild(row);
   }
 
+  /**
+   * Appends a new Operational Note input row to the edit form.
+   * Tracks current user and timestamp metadata invisibly.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
   function addOpNoteRow(containerId, data = {}) {
     var container = document.getElementById(containerId);
     if (!container) return;
@@ -665,6 +693,10 @@
     container.appendChild(row);
   }
 
+  /**
+   * Harvests data from dynamically added Contact rows and formats it into a JSON string.
+   * @returns {string} Stringified JSON array of contacts.
+   */
   function getContactsJSON(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return "[]";
@@ -685,6 +717,10 @@
     return JSON.stringify(contacts);
   }
 
+  /**
+   * Harvests data from dynamically added Address rows and formats it into a JSON string.
+   * @returns {string} Stringified JSON array of addresses.
+   */
   function getAddressesJSON(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return "[]";
@@ -706,6 +742,11 @@
     return JSON.stringify(addresses);
   }
 
+  /**
+   * Harvests data from dynamically added Operational Note rows and formats into JSON.
+   * Tracks editor and timestamp metadata.
+   * @returns {string} Stringified JSON array of operational notes.
+   */
   function getOpNotesJSON(containerId) {
     var container = document.getElementById(containerId);
     if (!container) return "[]";
@@ -725,8 +766,14 @@
   }
 
   /* ========================================================================
-     4. ACCOUNT MANAGER DATA FETCHER
+     4. DATA FETCHING, FILTERING & SORTING
      ======================================================================== */
+     
+  /**
+   * Fetches active account managers from backend and injects them into a specific dropdown list.
+   * @param {string} selectId - The DOM ID of the target `<select>` element.
+   * @param {string} selectedValue - Optional value to auto-select after load.
+   */
   function populateAccountManagersDropdown(selectId, selectedValue) {
     var selectEl = document.getElementById(selectId);
     if (!selectEl) return;
@@ -749,13 +796,15 @@
     }).getUsersList();
   }
 
-  /* ========================================================================
-     5. TABLE RENDERING, FILTERING & SORTING
-     ======================================================================== */
   var GLOBAL_CLIENT_DATA = [];
   var CURRENT_CLIENT_SORT_COLUMN = 'companyName'; 
   var CURRENT_CLIENT_SORT_DESC = false; 
 
+  /**
+   * Success handler for fetching the master list of clients.
+   * Stores locally, populates dynamic filters, and renders the initial table view.
+   * @param {Array} clients - Array of client objects returned from backend.
+   */
   function populateClientsTable(clients) {
     GLOBAL_CLIENT_DATA = clients || [];
     var amDrop = document.getElementById('client-am-drop');
@@ -774,6 +823,10 @@
     applyClientFilters();
   }
 
+  /**
+   * Toggles the sorting direction or changes the sorting column for the clients table.
+   * @param {string} column - Internal data key to sort by.
+   */
   function handleClientSort(column) {
     if (CURRENT_CLIENT_SORT_COLUMN === column) {
       CURRENT_CLIENT_SORT_DESC = !CURRENT_CLIENT_SORT_DESC;
@@ -784,6 +837,35 @@
     applyClientFilters();
   }
 
+  /**
+   * Resets all filter dropdowns and text searches back to their default loaded state.
+   */
+  function resetClientFilters() {
+    var searchInput = document.getElementById('client-filter-search');
+    if (searchInput) searchInput.value = '';
+
+    var statusCbs = document.querySelectorAll('.client-filter-status-cb');
+    statusCbs.forEach(function(cb) {
+      cb.checked = (cb.value === 'Onboarding' || cb.value === 'Active');
+    });
+
+    var serviceCbs = document.querySelectorAll('.client-filter-service-cb');
+    serviceCbs.forEach(function(cb) {
+      cb.checked = true;
+    });
+
+    var amCbs = document.querySelectorAll('.client-filter-am-cb');
+    amCbs.forEach(function(cb) {
+      cb.checked = true;
+    });
+
+    applyClientFilters();
+  }
+
+  /**
+   * Aggregates active filters, applies them to the global data array, sorts the result,
+   * and dispatches to the renderer.
+   */
   function applyClientFilters() {
     var searchInput = document.getElementById('client-filter-search');
     var searchText = searchInput ? searchInput.value.toLowerCase() : "";
@@ -825,6 +907,10 @@
     renderClientTableRows(filteredData);
   }
 
+  /**
+   * Compiles the visual HTML rows and appends them to the main Client Data table body.
+   * @param {Array} clients - Pre-filtered/sorted array of client objects.
+   */
   function renderClientTableRows(clients) {
     var tbody = document.getElementById('clientTableBody');
     if (!tbody) return;
@@ -854,6 +940,29 @@
   /* ========================================================================
      6. ADD CLIENT FORM SUBMISSION
      ======================================================================== */
+     
+  /**
+   * Prepares the UI for adding a new client. Resets all text fields, JSON arrays, and rich editors.
+   */
+  function openAddClientForm() {
+    resetAccordions('addClientView');
+    document.getElementById('addClientForm').reset();
+    document.getElementById('add-contacts-container').innerHTML = '';
+    if (addClientQuill) addClientQuill.setContents([]);
+    
+    var msgEl = document.getElementById('add-status');
+    if(msgEl) msgEl.innerHTML = '';
+    
+    toggleClientOverlay('add-client-overlay', false);
+    switchView('addClientView');
+    initClientEditors(); 
+  }
+
+  /**
+   * Bundles form data, triggers loading overlays, and sends the payload to the backend creation endpoint.
+   * On success, fetches updated lists and navigates to the Read-Only profile of the new record.
+   * @param {Event} e - HTML Form Submit Event
+   */
   function handleAddClientSubmit(e) {
     if(e) e.preventDefault();
     var company = document.getElementById('add-company').value;
@@ -916,20 +1025,12 @@
   /* ========================================================================
      7. EDIT CLIENT FORM LOADING & SUBMISSION
      ======================================================================== */
-  function openAddClientForm() {
-    resetAccordions('addClientView');
-    document.getElementById('addClientForm').reset();
-    document.getElementById('add-contacts-container').innerHTML = '';
-    if (addClientQuill) addClientQuill.setContents([]);
-    
-    var msgEl = document.getElementById('add-status');
-    if(msgEl) msgEl.innerHTML = '';
-    
-    toggleClientOverlay('add-client-overlay', false);
-    switchView('addClientView');
-    initClientEditors(); 
-  }
 
+  /**
+   * Purges previous edit form data, triggers backend fetch for specific record,
+   * parses JSON components into visual rows, and prepares Quill editors.
+   * @param {number} rowIndex - Targeted index belonging to the requested Client.
+   */
   function openEditClientForm(rowIndex) {
     resetAccordions('editClientView');
     switchView('editClientView');
@@ -1013,6 +1114,11 @@
     }).getClientById(rowIndex);
   }
 
+  /**
+   * Bundles updated form data, delegates JSON encoding of sub-arrays,
+   * sends payload to backend update endpoint. Resyncs and routes back to View-Only profile on success.
+   * @param {Event} e - HTML Form Submit Event
+   */
   function handleEditClientSubmit(e) {
     if(e) e.preventDefault();
     
@@ -1075,6 +1181,11 @@
      ======================================================================== */
   window.CURRENT_VIEW_CLIENT_DATA = null;
 
+  /**
+   * Prepares the View-Only profile page. Removes ghost data instantly,
+   * activates the loading overlay, fetches fresh data, and orchestrates HTML injection.
+   * @param {number} rowIndex - Targeted index belonging to the requested Client.
+   */
   function openReadOnlyClient(rowIndex) {
     switchView('readOnlyClientView');
     // Clear view immediately while loading to ensure no ghost data
@@ -1086,7 +1197,7 @@
     document.getElementById('ro-history-container').innerHTML = "";
     hideQuickNoteInput(); 
 
-    toggleClientOverlay('ro-client-overlay', true, 'Loading Profile...');
+    toggleClientOverlay('ro-client-overlay', true, 'Loading Client Profile...');
     
     google.script.run.withSuccessHandler(function(data) {
       toggleClientOverlay('ro-client-overlay', false);
@@ -1205,50 +1316,30 @@
     }).getClientById(rowIndex);
   }
 
-  /** Populates read-only user view with loading overlay */
-  function openReadOnlyUser(rowIndex) {
-    switchView('readOnlyUserView');
-    
-    // Clear view immediately while loading to ensure no ghost data
-    document.getElementById('ro-user-photo').src = DEFAULT_AVATAR;
-    document.getElementById('ro-user-fullname').innerText = '';
-    document.getElementById('ro-user-role-pos').innerText = '';
-    document.getElementById('ro-user-status-badge').innerHTML = '';
-    
-    toggleClientOverlay('ro-user-overlay', true, 'Loading Profile...');
-    
-    google.script.run.withSuccessHandler(function(u) {
-      toggleClientOverlay('ro-user-overlay', false);
-      
-      document.getElementById('ro-user-photo').src = getDirectImgUrl(u.profilePhotoUrl);
-      document.getElementById('ro-user-fullname').innerText = (u.firstName || "") + " " + (u.lastName || "");
-      document.getElementById('ro-user-role-pos').innerText = u.role + " | " + u.position;
-      document.getElementById('ro-user-username').innerText = u.username;
-      document.getElementById('ro-user-email').innerText = u.workEmail;
-      document.getElementById('ro-user-pemail').innerText = u.personalEmail || "N/A";
-      document.getElementById('ro-user-phone').innerText = u.phone || "N/A";
-      document.getElementById('ro-user-hired').innerText = u.dateHired || "N/A";
-      document.getElementById('ro-user-emptype').innerText = u.employmentType || "N/A";
-      document.getElementById('ro-user-bday').innerText = u.birthday || "N/A";
-      document.getElementById('ro-user-fb').innerText = u.facebookUrl || "N/A";
-      document.getElementById('ro-user-addr').innerText = u.address || "N/A";
-      
-      var badgeClass = (u.status && u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
-      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status || 'Active'}</span>`;
-      document.getElementById('ro-edit-link').onclick = () => openEditUserForm(u.rowIndex);
-    }).getUserById(rowIndex);
-  }
-
-  // --- DRAG AND DROP REORDER LOGIC ---
-  var draggedOpNoteIndex = null;
+  /**
+   * Initializes the drag action on an Operational Note.
+   * @param {DragEvent} e - HTML Drag Event
+   * @param {number} index - Source index of the dragged item.
+   */
   function dragOpNoteStart(e, index) {
     draggedOpNoteIndex = index;
     e.dataTransfer.effectAllowed = 'move';
   }
+  
+  /**
+   * Permits dropping during the drag operation.
+   * @param {DragEvent} e - HTML Drag Event
+   */
   function dragOpNoteOver(e) {
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
   }
+  
+  /**
+   * Completes the drag-and-drop. Re-orders the internal data array and dispatches background update to backend.
+   * @param {DragEvent} e - HTML Drop Event
+   * @param {number} targetIndex - Target destination index.
+   */
   function dropOpNote(e, targetIndex) {
     e.preventDefault();
     if (draggedOpNoteIndex === null || draggedOpNoteIndex === targetIndex) return;
@@ -1267,7 +1358,10 @@
     google.script.run.updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
   }
 
-  // --- INLINE EDIT NOTE LOGIC ---
+  /**
+   * Hides the display text and opens an inline text input for editing an operational note.
+   * @param {number} index - Index of the note being edited.
+   */
   function editOpNote(index) {
     document.getElementById('note-view-' + index).style.display = 'none';
     document.getElementById('note-edit-' + index).style.display = 'flex';
@@ -1276,6 +1370,10 @@
     input.focus();
   }
 
+  /**
+   * Reverts inline edit mode back to read-only view.
+   * @param {number} index - Index of the note being cancelled.
+   */
   function cancelOpNoteEdit(index) {
     document.getElementById('note-view-' + index).style.display = 'flex';
     document.getElementById('note-edit-' + index).style.display = 'none';
@@ -1287,6 +1385,11 @@
     }
   }
 
+  /**
+   * Submits the updated text from the inline edit field. 
+   * Triggers background silent update and re-renders profile logic.
+   * @param {number} index - Index of the note being saved.
+   */
   function saveOpNoteEdit(index) {
     var input = document.getElementById('note-input-' + index);
     var newContent = input.value.trim();
@@ -1319,7 +1422,9 @@
     }).updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
   }
 
-  // --- QUICK ADD NOTE LOGIC ---
+  /**
+   * Activates the UI container for quickly adding a new Operational Note on the profile view.
+   */
   function showQuickNoteInput() {
     document.getElementById('ro-add-note-trigger').style.display = 'none';
     var area = document.getElementById('ro-quick-note-area');
@@ -1330,11 +1435,18 @@
     input.focus();
   }
 
+  /**
+   * Hides the Quick Note input container.
+   */
   function hideQuickNoteInput() {
     document.getElementById('ro-add-note-trigger').style.display = 'block';
     document.getElementById('ro-quick-note-area').style.display = 'none';
   }
 
+  /**
+   * Pushes a new operational note object to the local profile state and dispatches
+   * to backend. Disables interface buttons to prevent duplicate submission clicks.
+   */
   function addQuickOpNote() {
     var input = document.getElementById('ro-quick-note-input');
     var content = input.value.trim();
@@ -1369,6 +1481,11 @@
     }).updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
   }
 
+  /**
+   * Mounts the visual HTML representations of all operational notes, wiring up
+   * drag-and-drop and inline editing event listeners.
+   * @param {string} notesJson - JSON string representation of the notes array.
+   */
   function renderOpNotesList(notesJson) {
     var container = document.getElementById('ro-opnotes-list');
     if (!container) return;
@@ -1414,6 +1531,11 @@
     container.innerHTML = html;
   }
 
+  /**
+   * Loops through the automated history payload injected by the backend diff engine
+   * and renders the field-by-field audit trail logic onto the screen.
+   * @param {string} historyJsonString - JSON representation of the update history array.
+   */
   function renderHistoryTab(historyJsonString) {
     var container = document.getElementById('ro-history-container');
     if (!container) return;
