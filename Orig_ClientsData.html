@@ -1,0 +1,1565 @@
+<!-- 
+  Clients Management Module - Frontend
+  Standardized under MR Hub Architecture Blueprint.
+  
+  CORE RESPONSIBILITIES:
+  - Master Client Database Management (Add/Edit/View).
+  - Contract, Service, and Contact Data tracking.
+  - Handover and Operational Notes Management.
+  
+  INTEGRITY FEATURES:
+  - Modular Loading Overlays for async operations.
+  - Deep JSON diffing for exact field-level audit trails.
+  - Inline Note Editing seamlessly combined with Drag/Drop Reordering.
+  - Comprehensive filter reset functionality and sorting.
+-->
+
+<style>
+  /* --- Modular Loading Overlay for Client Forms --- */
+  .client-loading-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.7);
+    z-index: 10;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--border-radius-large);
+    flex-direction: column;
+    gap: 10px;
+  }
+  .spinner-client {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid var(--brand-primary);
+    border-radius: 50%;
+    animation: spin-client 1s linear infinite;
+  }
+  @keyframes spin-client {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  /* Ensure wrappers are positioned for overlays and have a min-height while loading */
+  #addClientView .form-wrapper, 
+  #editClientView .form-wrapper,
+  #readOnlyClientView .form-wrapper { 
+    position: relative; 
+    min-height: 300px;
+  }
+</style>
+
+<!-- List View: Master Client Directory -->
+<div id="clientListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  
+  <div class="view-header-bar" style="margin-bottom: 15px;">
+    <h2>Clients Database</h2>
+    <button class="btn-primary" onclick="openAddClientForm()">+ Add Client</button>
+  </div>
+
+  <div class="filter-wrapper">
+    <input type="text" id="client-filter-search" class="filter-input" placeholder="Search by Brand, Contact, or Services..." onkeyup="applyClientFilters()">
+    <button class="btn-filter-toggle" onclick="toggleFilter('client-adv')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+      Filters
+    </button>
+  
+    <div id="client-adv" class="filter-advanced">
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('client-status-drop')">Status ▼</button>
+        <div class="dropdown-content" id="client-status-drop">
+          <label><input type="checkbox" class="client-filter-status-cb" value="Onboarding" checked onchange="applyClientFilters()"> Onboarding</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Active" checked onchange="applyClientFilters()"> Active</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Paused" onchange="applyClientFilters()"> Paused</label>
+          <label><input type="checkbox" class="client-filter-status-cb" value="Inactive" onchange="applyClientFilters()"> Inactive</label>
+        </div>
+      </div>
+
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('client-service-drop')">Services ▼</button>
+        <div class="dropdown-content" id="client-service-drop">
+          <label><input type="checkbox" class="client-filter-service-cb" value="Brand Management" checked onchange="applyClientFilters()"> Brand Management</label>
+          <label><input type="checkbox" class="client-filter-service-cb" value="Listing Optimization" checked onchange="applyClientFilters()"> Listing Optimization</label>
+          <label><input type="checkbox" class="client-filter-service-cb" value="Managed Listing Optimization" checked onchange="applyClientFilters()"> Managed Listing Optimization</label>
+        </div>
+      </div>
+
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('client-am-drop')">Account Manager ▼</button>
+        <div class="dropdown-content" id="client-am-drop"></div>
+      </div>
+      <button type="button" class="btn-filter-toggle" onclick="resetClientFilters()" style="background: transparent; color: var(--brand-primary); border: 1px solid var(--brand-primary);">Reset</button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="handleClientSort('brandName')">Brand Name <span id="csort-brandName" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('primaryContact')">Primary Contact <span id="csort-primaryContact" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('services')">Services <span id="csort-services" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('acctMgr')">Account Manager <span id="csort-acctMgr" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleClientSort('status')">Status <span id="csort-status" class="sort-icon"></span></th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="clientTableBody">
+        <tr><td colspan="6" style="text-align:center; padding: 30px;">Loading clients...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Client Form -->
+<div id="addClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  <div class="form-wrapper">
+    <div id="add-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Creating Client...</span></div>
+    <h2 style="margin-top: 0; color: var(--brand-dark);">Add New Client</h2>
+    <form id="addClientForm" onsubmit="handleAddClientSubmit(event)" novalidate>
+      
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Client Information</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Company Name *</label><input type="text" id="add-company" class="form-control" required></div>
+          <div class="form-group"><label>Brand Name *</label><input type="text" id="add-brand" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Company Address</label>
+            <input type="text" id="add-address" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Website</label><input type="url" id="add-website" class="form-control" placeholder="https://www.example.com"></div>
+        </div>
+      </div>
+      
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Primary Contact</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name *</label><input type="text" id="add-priFirst" class="form-control" required></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" id="add-priLast" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email *</label><input type="email" id="add-priEmail" class="form-control" required></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="add-priPhone" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Position *</label><input type="text" id="add-priPosition" class="form-control" required></div>
+          <div class="form-group"><label>Birthday</label><input type="date" id="add-priBirthday" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Direct Address</label>
+            <input type="text" id="add-priAddress" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Additional Contacts</button>
+      <div class="panel">
+        <div style="text-align: right; margin: 15px 0 10px 0;">
+          <button type="button" class="btn-add-row" onclick="addContactRow('add-contacts-container')">+ Add Contact</button>
+        </div>
+        <div id="add-contacts-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Contract Info & Services</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Contract Start Date *</label><input type="date" id="add-date" class="form-control" required></div>
+          <div class="form-group"><label>Expiration Date</label><input type="date" id="add-expDate" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Term Count</label><input type="number" id="add-termCount" class="form-control"></div>
+          <div class="form-group">
+            <label>Term Unit</label>
+            <select id="add-termUnit" class="form-control">
+              <option value="Months">Months</option>
+              <option value="Years">Years</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Brand Registered</label>
+            <select id="add-brandReg" class="form-control">
+              <option value="Yes">Yes</option>
+              <option value="No" selected>No</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Monthly Value ($) *</label><input type="number" id="add-value" class="form-control" required></div>
+        </div>
+
+        <div class="form-group">
+          <label>Services Included *</label>
+          <div class="checkbox-group" style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Brand Management"> Brand Management</label>
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Listing Optimization"> Listing Optimization</label>
+            <label class="checkbox-label"><input type="checkbox" name="add-services" value="Managed Listing Optimization"> Managed Listing Optimization</label>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Handover Notes</button>
+      <div class="panel">
+        <div class="form-group" style="width: 100%; margin-top: 15px; margin-bottom: 20px;">
+          <label>Handover Notes</label>
+          <div id="add-editor" style="height: 200px; background-color: var(--brand-white); border-radius: var(--border-radius-small); border: 1px solid #ccc;"></div>
+        </div>
+      </div>
+
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="add-submit">Submit & Add Client</button>
+      </div>
+    </form>
+    <div id="add-status" class="status-msg"></div>
+  </div>
+</div>
+
+<!-- Edit Client Form -->
+<div id="editClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  <div class="form-wrapper">
+    <div id="edit-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span id="edit-overlay-text">Loading Client...</span></div>
+    <h2 style="margin-top: 0; color: var(--brand-dark);">Edit Client Details</h2>
+    <form id="editClientForm" onsubmit="handleEditClientSubmit(event)" novalidate>
+      <input type="hidden" id="edt-rowIndex">
+      
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Client Information</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Company Name</label><input type="text" id="edt-company" class="form-control"></div>
+          <div class="form-group"><label>Brand Name</label><input type="text" id="edt-brand" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Company Address</label>
+            <input type="text" id="edt-address" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Website</label><input type="url" id="edt-website" class="form-control"></div>
+          <div class="form-group"><label>Anniversary Date</label><input type="date" id="edt-anniversary" class="form-control"></div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Primary Contact</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name</label><input type="text" id="edt-priFirst" class="form-control"></div>
+          <div class="form-group"><label>Last Name</label><input type="text" id="edt-priLast" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Email</label><input type="email" id="edt-priEmail" class="form-control"></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="edt-priPhone" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Position</label><input type="text" id="edt-priPosition" class="form-control"></div>
+          <div class="form-group"><label>Birthday</label><input type="date" id="edt-priBirthday" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Direct Address</label>
+            <input type="text" id="edt-priAddress" class="form-control" style="width: 100%; box-sizing: border-box;">
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Additional Contacts</button>
+      <div class="panel">
+        <div style="text-align: right; margin: 15px 0 10px 0;">
+          <button type="button" class="btn-add-row" onclick="addContactRow('edt-contacts-container')">+ Add Contact</button>
+        </div>
+        <div id="edt-contacts-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Contract Info & Services</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group">
+            <label>Original Contract Start</label>
+            <input type="date" id="edt-orig-date" class="form-control" readonly style="background:#eee; color:#666; cursor:not-allowed;" title="Protected Date">
+          </div>
+          <div class="form-group">
+            <label>Current Start Date</label>
+            <input type="date" id="edt-current-date" class="form-control">
+          </div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group">
+            <label>Original Expiration Date</label>
+            <input type="date" id="edt-orig-expDate" class="form-control" readonly style="background:#eee; color:#666; cursor:not-allowed;" title="Protected Date">
+          </div>
+          <div class="form-group">
+            <label>Current Expiration Date</label>
+            <input type="date" id="edt-current-expDate" class="form-control">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Original End Date (1st Cancel)</label>
+            <input type="date" id="edt-orig-endDate" class="form-control" readonly style="background:#eee; color:#666; cursor:not-allowed;" title="Protected Date">
+          </div>
+          <div class="form-group">
+            <label>Latest End Date</label>
+            <input type="date" id="edt-endDate" class="form-control" placeholder="Update if cancelling again">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>Term Count</label><input type="number" id="edt-termCount" class="form-control"></div>
+          <div class="form-group">
+            <label>Term Unit</label>
+            <select id="edt-termUnit" class="form-control">
+              <option value="Months">Months</option>
+              <option value="Years">Years</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Brand Registered</label>
+            <select id="edt-brandReg" class="form-control">
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Monthly Value ($)</label><input type="number" id="edt-value" class="form-control"></div>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group"><label>Commission Rate (%)</label><input type="text" id="edt-commRate" class="form-control"></div>
+          <div class="form-group"><label>Commission Basis</label><input type="text" id="edt-commBasis" class="form-control"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group"><label>PPC Launch Date</label><input type="date" id="edt-ppcDate" class="form-control"></div>
+          <div class="form-group"><label>DSP Launch Date</label><input type="date" id="edt-dspDate" class="form-control"></div>
+        </div>
+        
+        <div class="form-group" style="margin-top: 15px;">
+          <label>Services Included *</label>
+          <div class="checkbox-group" style="display: flex; gap: 15px; flex-wrap: wrap;">
+            <label class="checkbox-label"><input type="checkbox" name="edt-services" value="Brand Management"> Brand Management</label>
+            <label class="checkbox-label"><input type="checkbox" name="edt-services" value="Listing Optimization"> Listing Optimization</label>
+            <label class="checkbox-label"><input type="checkbox" name="edt-services" value="Managed Listing Optimization"> Managed Listing Optimization</label>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Addresses (Shipping & Return)</button>
+      <div class="panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin: 15px 0 10px 0;">
+          <strong style="color: var(--brand-dark);">Shipping Addresses</strong>
+          <button type="button" class="btn-add-row" onclick="addAddressRow('edt-shipping-container')">+ Add Address</button>
+        </div>
+        <div id="edt-shipping-container" style="margin-bottom: 20px;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; border-top: 1px solid #E3E3E3; padding-top: 15px;">
+          <strong style="color: var(--brand-dark);">Return Addresses</strong>
+          <button type="button" class="btn-add-row" onclick="addAddressRow('edt-return-container')">+ Add Address</button>
+        </div>
+        <div id="edt-return-container"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">System Configuration</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Status</label>
+            <select id="edt-status" class="form-control">
+              <option value="Onboarding">Onboarding</option>
+              <option value="Active">Active</option>
+              <option value="Paused">Paused</option>
+              <option value="Inactive">Inactive</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Brand Code</label><input type="text" id="edt-brandCode" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Account Manager</label>
+            <select id="edt-acctMgr" class="form-control">
+              <option value="">Loading...</option>
+            </select>
+          </div>
+          <div class="form-group"><label>Brand Folder (URL)</label><input type="url" id="edt-folder" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group" style="flex: 1; width: 100%;">
+            <label>Remarks</label>
+            <textarea id="edt-remarks" class="form-control" style="width: 100%; height: 80px; resize: vertical; box-sizing: border-box; border: 1px solid #ccc; border-radius: var(--border-radius-small); font-family: inherit; padding: 14px; background-color: var(--brand-white);"></textarea>
+          </div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Handover Notes</button>
+      <div class="panel">
+        <div class="form-group" style="width: 100%; margin-top: 15px; margin-bottom: 20px;">
+          <label>Handover Notes</label>
+          <div id="edt-editor" style="height: 200px; background-color: var(--brand-white); border-radius: var(--border-radius-small); border: 1px solid #ccc;"></div>
+        </div>
+      </div>
+      
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Operational Notes</button>
+      <div class="panel">
+        <div style="text-align: right; margin: 15px 0 10px 0;">
+          <button type="button" class="btn-add-row" onclick="addOpNoteRow('edt-opnotes-container')">+ Add Note</button>
+        </div>
+        <div id="edt-opnotes-container" style="margin-bottom: 20px;"></div>
+      </div>
+
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="edt-submit">Save Changes</button>
+      </div>
+    </form>
+    <div id="ed-statusMsg" class="status-msg"></div>
+  </div>
+</div>
+
+<!-- View Client (Read-Only Profile) -->
+<div id="readOnlyClientView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Client List</button>
+  
+  <div class="form-wrapper" style="max-width: 900px; margin-top: 0;">
+    <div id="ro-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Loading Client Profile...</span></div>
+    <div id="ro-header-bar" style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px; border-bottom: 2px solid #E3E3E3; padding-bottom: 15px;">
+       <h2 id="ro-title" style="margin:0; color: var(--brand-dark);"></h2>
+       <button id="ro-edit-btn" class="btn-edit" style="padding: 8px 16px;">Edit Client</button>
+    </div>
+
+    <div class="tab-nav">
+      <button type="button" class="tab-btn active" id="btn-ro-overview" onclick="navigateClientTab('ro', 'overview')">Overview</button>
+      <button type="button" class="tab-btn" id="btn-ro-contacts" onclick="navigateClientTab('ro', 'contacts')">Contacts & Addresses</button>
+      <button type="button" class="tab-btn" id="btn-ro-handoverNotes" onclick="navigateClientTab('ro', 'handoverNotes')">Handover Notes</button>
+      <button type="button" class="tab-btn" id="btn-ro-opNotes" onclick="navigateClientTab('ro', 'opNotes')">Operational Notes</button>
+      <button type="button" class="tab-btn" id="btn-ro-history" onclick="navigateClientTab('ro', 'history')">Update History</button>
+    </div>
+
+    <div id="ro-overview" class="tab-content" style="display: block;"></div>
+    <div id="ro-contacts" class="tab-content" style="display: none;"></div>
+    <div id="ro-handoverNotes" class="tab-content" style="display: none;"></div>
+    
+    <div id="ro-opNotes" class="tab-content" style="display: none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px;">
+        <h3 style="margin:0;">Operational Notes</h3>
+      </div>
+      
+      <p style="font-size:12px; color:#888; margin-bottom: 10px;">Drag and drop items to re-order, or click a note text to edit it.</p>
+      
+      <div id="ro-opnotes-list"></div>
+
+      <div id="ro-add-note-trigger" onclick="showQuickNoteInput()" onmouseover="this.style.backgroundColor='#f8fafc'" onmouseout="this.style.backgroundColor='#fff'" style="background: #fff; border: 2px dashed #ccc; padding: 15px; margin-bottom: 10px; border-radius: 4px; cursor: pointer; text-align: center; color: var(--brand-primary); font-weight: bold; transition: 0.2s;">
+        + Add Note
+      </div>
+
+      <div id="ro-quick-note-area" style="display: none; gap:10px; margin-bottom: 20px; background: #fff; padding: 15px; border-radius: 4px; border: 1px solid #ddd; box-shadow: 0 4px 6px rgba(0,0,0,0.05); align-items: center;">
+        <input type="text" id="ro-quick-note-input" class="form-control" placeholder="Type a new operational note here..." style="flex:1;">
+        <button id="ro-quick-note-btn" class="btn-primary" onclick="addQuickOpNote()" style="flex-shrink: 0;">Save Note</button>
+        <button class="btn-filter-toggle" onclick="hideQuickNoteInput()" style="background: transparent; color: #888; border: 1px solid #ddd; flex-shrink: 0;">Cancel</button>
+      </div>
+
+    </div>
+    
+    <div id="ro-history" class="tab-content" style="display: none;">
+      <h3 style="margin-top:0;">Audit Trail</h3>
+      <div id="ro-history-container" style="background: #f9f9f9; padding: 15px; border-radius: 4px;"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+  /* ========================================================================
+     1. UI, NAVIGATION & ACCORDIONS
+     ======================================================================== */
+
+  /**
+   * Toggles the visibility of accordion panels within forms.
+   * Also re-initializes Quill editors if the specific panel containing them is opened.
+   * @param {HTMLElement} element - The clicked accordion button.
+   */
+  function toggleAccordion(element) {
+    element.classList.toggle("active");
+    var panel = element.nextElementSibling;
+    if (panel.style.display === "block") {
+      panel.style.display = "none";
+    } else {
+      panel.style.display = "block";
+      initClientEditors();
+    }
+  }
+
+  /**
+   * Resets all accordion panels in a specified view to their default state
+   * (Top accordion open, all others closed).
+   * @param {string} viewId - The DOM ID of the container view.
+   */
+  function resetAccordions(viewId) {
+    var view = document.getElementById(viewId);
+    if (!view) return;
+    var accordions = view.querySelectorAll('.accordion');
+    var panels = view.querySelectorAll('.panel');
+    for (var i = 0; i < accordions.length; i++) {
+      if (i === 0) {
+        accordions[i].classList.add('active');
+        panels[i].style.display = 'block';
+      } else {
+        accordions[i].classList.remove('active');
+        panels[i].style.display = 'none';
+      }
+    }
+  }
+
+  /**
+   * Navigates between the internal tabs (Overview, Contacts, History, etc.)
+   * within a specific Client profile view.
+   * @param {string} prefix - View prefix ('ro', 'add', 'edt').
+   * @param {string} tabId - Target tab identifier.
+   */
+  function navigateClientTab(prefix, tabId) {
+    var containerId = (prefix === 'ro') ? 'readOnlyClientView' : (prefix === 'add') ? 'addClientView' : 'editClientView';
+    var view = document.getElementById(containerId);
+    if (!view) return;
+    
+    var contents = view.querySelectorAll('.tab-content');
+    var buttons = view.querySelectorAll('.tab-btn');
+    
+    if (contents.length > 0) {
+      contents.forEach(c => c.style.display = 'none');
+      buttons.forEach(b => b.classList.remove('active'));
+      
+      var targetContent = document.getElementById(prefix + '-' + tabId);
+      var targetBtn = document.getElementById('btn-' + prefix + '-' + tabId);
+      
+      if (targetContent) targetContent.style.display = 'block';
+      if (targetBtn) targetBtn.classList.add('active');
+    }
+  }
+
+  /**
+   * Controls the visibility of the semi-transparent loading overlay for Client forms.
+   * @param {string} id - The DOM ID of the overlay element.
+   * @param {boolean} show - True to display, false to hide.
+   * @param {string} text - Optional text to display alongside the spinner.
+   */
+  function toggleClientOverlay(id, show, text) {
+    var overlay = document.getElementById(id);
+    if (!overlay) return;
+    overlay.style.display = show ? 'flex' : 'none';
+    if (text) {
+      var txtEl = overlay.querySelector('span');
+      if (txtEl) txtEl.innerText = text;
+    }
+  }
+  
+  /* ========================================================================
+     2. RICH TEXT EDITOR & DATE FORMATTER
+     ======================================================================== */
+  var addClientQuill, editClientQuill;
+  
+  /**
+   * Initializes Quill rich text editors for Handover Notes if they haven't 
+   * been initialized yet. Prevents double-instantiation errors.
+   */
+  function initClientEditors() {
+    if (typeof Quill !== 'undefined') {
+      try {
+        var addEd = document.getElementById('add-editor');
+        if (!addClientQuill && addEd) {
+          addClientQuill = new Quill('#add-editor', { theme: 'snow', placeholder: 'Type handover notes here...' });
+        }
+        var edtEd = document.getElementById('edt-editor');
+        if (!editClientQuill && edtEd) {
+          editClientQuill = new Quill('#edt-editor', { theme: 'snow', placeholder: 'Update handover notes here...' });
+        }
+      } catch(e) { console.error("Quill error:", e); }
+    }
+  }
+
+  /**
+   * Safely parses and formats date strings into YYYY-MM-DD format suitable for HTML5 date inputs.
+   * @param {string} dateStr - Raw date string from backend.
+   * @returns {string} Formatted date string or empty string if invalid.
+   */
+  function safelyFormatDate(dateStr) {
+    if (!dateStr) return "";
+    try {
+      var d = new Date(dateStr);
+      if (isNaN(d.getTime())) return "";
+      return d.toISOString().split('T')[0];
+    } catch(e) { return ""; }
+  }
+
+  /* ========================================================================
+     3. DYNAMIC JSON ROWS (Contacts, Addresses, OpNotes)
+     ======================================================================== */
+
+  /**
+   * Appends a new, empty (or pre-filled) Contact row to the specified container.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
+  function addContactRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row';
+    row.style = 'border: 1px solid #ddd; background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 4px;';
+    row.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <input type="text" class="c-fname form-control" placeholder="First Name" value="${data.firstName || ''}">
+        <input type="text" class="c-lname form-control" placeholder="Last Name" value="${data.lastName || ''}">
+        <input type="email" class="c-email form-control" placeholder="Email" value="${data.email || ''}">
+        <input type="text" class="c-phone form-control" placeholder="Phone" value="${data.phone || ''}">
+        <input type="text" class="c-pos form-control" placeholder="Position" value="${data.position || ''}">
+        <input type="date" class="c-bday form-control" placeholder="Birthday" value="${data.birthday || ''}">
+      </div>
+      <div style="margin-top: 10px;">
+        <input type="text" class="c-address form-control" placeholder="Full Address" value="${data.address || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.parentElement.parentElement.remove()">Remove Contact</button>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  /**
+   * Appends a new, empty (or pre-filled) Address row to the specified container.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
+  function addAddressRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row';
+    row.style = 'border: 1px solid #ddd; background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 4px;';
+    row.innerHTML = `
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-contact form-control" placeholder="Contact Name" value="${data.contactName || ''}">
+        <input type="text" class="a-phone form-control" placeholder="Phone Number" value="${data.phone || ''}">
+        <input type="email" class="a-email form-control" placeholder="Email" value="${data.email || ''}">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input type="text" class="a-street form-control" placeholder="Street Address" value="${data.street || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-city form-control" placeholder="City" value="${data.city || ''}">
+        <input type="text" class="a-state form-control" placeholder="State/Prov" value="${data.state || ''}">
+        <input type="text" class="a-country form-control" placeholder="Country Code" value="${data.countryCode || ''}">
+      </div>
+      <div style="margin-bottom: 10px;">
+        <input type="text" class="a-remarks form-control" placeholder="Remarks" value="${data.remarks || ''}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <div style="text-align: right; margin-top: 10px;">
+        <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline;" onclick="this.parentElement.parentElement.remove()">Remove Address</button>
+      </div>
+    `;
+    container.appendChild(row);
+  }
+
+  /**
+   * Appends a new Operational Note input row to the edit form.
+   * Tracks current user and timestamp metadata invisibly.
+   * @param {string} containerId - The DOM ID to append to.
+   * @param {Object} data - Optional pre-existing data object.
+   */
+  function addOpNoteRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row op-note-row';
+    row.style = 'border: 1px solid #ddd; background: #fafafa; padding: 15px; margin-bottom: 10px; border-radius: 4px; display:flex; gap:10px; align-items:center;';
+
+    var content = data.content ? data.content.replace(/"/g, '&quot;') : '';
+    var editor = data.editor || (typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : 'Unknown User');
+    var timestamp = data.timestamp || new Date().toISOString();
+
+    row.innerHTML = `
+      <input type="hidden" class="op-editor" value="${editor}">
+      <input type="hidden" class="op-timestamp" value="${timestamp}">
+      <div style="flex:1;">
+         <input type="text" class="op-content form-control" placeholder="Enter operational note..." value="${content}" style="width: 100%; box-sizing: border-box;">
+      </div>
+      <button type="button" style="color: #d9534f; border: none; background: none; font-size: 12px; cursor: pointer; text-decoration: underline; flex-shrink:0;" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    container.appendChild(row);
+  }
+
+  /**
+   * Harvests data from dynamically added Contact rows and formats it into a JSON string.
+   * @returns {string} Stringified JSON array of contacts.
+   */
+  function getContactsJSON(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return "[]";
+    var rows = container.querySelectorAll('.dynamic-json-row:not(.op-note-row)');
+    var contacts = [];
+    rows.forEach(function(row) {
+      if(!row.querySelector('.c-fname')) return;
+      contacts.push({
+        firstName: row.querySelector('.c-fname').value,
+        lastName: row.querySelector('.c-lname').value,
+        email: row.querySelector('.c-email').value,
+        phone: row.querySelector('.c-phone').value,
+        position: row.querySelector('.c-pos').value,
+        birthday: row.querySelector('.c-bday').value,
+        address: row.querySelector('.c-address').value
+      });
+    });
+    return JSON.stringify(contacts);
+  }
+
+  /**
+   * Harvests data from dynamically added Address rows and formats it into a JSON string.
+   * @returns {string} Stringified JSON array of addresses.
+   */
+  function getAddressesJSON(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return "[]";
+    var rows = container.querySelectorAll('.dynamic-json-row:not(.op-note-row)');
+    var addresses = [];
+    rows.forEach(function(row) {
+      if(!row.querySelector('.a-contact')) return;
+      addresses.push({
+        contactName: row.querySelector('.a-contact').value,
+        phone: row.querySelector('.a-phone').value,
+        email: row.querySelector('.a-email').value,
+        street: row.querySelector('.a-street').value,
+        city: row.querySelector('.a-city').value,
+        state: row.querySelector('.a-state').value,
+        countryCode: row.querySelector('.a-country').value,
+        remarks: row.querySelector('.a-remarks').value
+      });
+    });
+    return JSON.stringify(addresses);
+  }
+
+  /**
+   * Harvests data from dynamically added Operational Note rows and formats into JSON.
+   * Tracks editor and timestamp metadata.
+   * @returns {string} Stringified JSON array of operational notes.
+   */
+  function getOpNotesJSON(containerId) {
+    var container = document.getElementById(containerId);
+    if (!container) return "[]";
+    var rows = container.querySelectorAll('.op-note-row');
+    var notes = [];
+    rows.forEach(function(row) {
+      var content = row.querySelector('.op-content').value;
+      if (content.trim() !== '') {
+         notes.push({
+           content: content,
+           editor: row.querySelector('.op-editor').value,
+           timestamp: row.querySelector('.op-timestamp').value
+         });
+      }
+    });
+    return JSON.stringify(notes);
+  }
+
+  /* ========================================================================
+     4. DATA FETCHING, FILTERING & SORTING
+     ======================================================================== */
+     
+  /**
+   * Fetches active account managers from backend and injects them into a specific dropdown list.
+   * @param {string} selectId - The DOM ID of the target `<select>` element.
+   * @param {string} selectedValue - Optional value to auto-select after load.
+   */
+  function populateAccountManagersDropdown(selectId, selectedValue) {
+    var selectEl = document.getElementById(selectId);
+    if (!selectEl) return;
+    selectEl.innerHTML = '<option value="">Loading AMs...</option>';
+    google.script.run.withSuccessHandler(function(users) {
+      if (!users || users.length === 0) {
+        selectEl.innerHTML = '<option value="">Error: No users found</option>';
+        return;
+      }
+      selectEl.innerHTML = '<option value="">Select Account Manager</option>';
+      var managers = users.filter(u => u.status === 'Active' && u.position.toLowerCase().includes('account manager'));
+      managers.forEach(u => {
+        if (u.username) {
+          var opt = document.createElement('option');
+          opt.value = u.username; opt.text = u.username;
+          selectEl.appendChild(opt);
+        }
+      });
+      if (selectedValue) selectEl.value = selectedValue;
+    }).getUsersList();
+  }
+
+  var GLOBAL_CLIENT_DATA = [];
+  var CURRENT_CLIENT_SORT_COLUMN = 'companyName'; 
+  var CURRENT_CLIENT_SORT_DESC = false; 
+
+  /**
+   * Success handler for fetching the master list of clients.
+   * Stores locally, populates dynamic filters, and renders the initial table view.
+   * @param {Array} clients - Array of client objects returned from backend.
+   */
+  function populateClientsTable(clients) {
+    GLOBAL_CLIENT_DATA = clients || [];
+    var amDrop = document.getElementById('client-am-drop');
+    if (amDrop && amDrop.innerHTML.trim() === '') {
+      var ams = ["Unassigned"];
+      if (typeof ACCOUNT_MANAGERS !== 'undefined') {
+         ACCOUNT_MANAGERS.forEach(function(am) { if (!ams.includes(am)) ams.push(am); });
+      }
+      amDrop.innerHTML = '';
+      ams.forEach(function(am) {
+        var label = document.createElement('label');
+        label.innerHTML = `<input type="checkbox" class="client-filter-am-cb" value="${am}" checked onchange="applyClientFilters()"> ${am}`;
+        amDrop.appendChild(label);
+      });
+    }
+    applyClientFilters();
+  }
+
+  /**
+   * Toggles the sorting direction or changes the sorting column for the clients table.
+   * @param {string} column - Internal data key to sort by.
+   */
+  function handleClientSort(column) {
+    if (CURRENT_CLIENT_SORT_COLUMN === column) {
+      CURRENT_CLIENT_SORT_DESC = !CURRENT_CLIENT_SORT_DESC;
+    } else {
+      CURRENT_CLIENT_SORT_COLUMN = column;
+      CURRENT_CLIENT_SORT_DESC = false; 
+    }
+    applyClientFilters();
+  }
+
+  /**
+   * Resets all filter dropdowns and text searches back to their default loaded state.
+   */
+  function resetClientFilters() {
+    var searchInput = document.getElementById('client-filter-search');
+    if (searchInput) searchInput.value = '';
+
+    var statusCbs = document.querySelectorAll('.client-filter-status-cb');
+    statusCbs.forEach(function(cb) {
+      cb.checked = (cb.value === 'Onboarding' || cb.value === 'Active');
+    });
+
+    var serviceCbs = document.querySelectorAll('.client-filter-service-cb');
+    serviceCbs.forEach(function(cb) {
+      cb.checked = true;
+    });
+
+    var amCbs = document.querySelectorAll('.client-filter-am-cb');
+    amCbs.forEach(function(cb) {
+      cb.checked = true;
+    });
+
+    applyClientFilters();
+  }
+
+  /**
+   * Aggregates active filters, applies them to the global data array, sorts the result,
+   * and dispatches to the renderer.
+   */
+  function applyClientFilters() {
+    var searchInput = document.getElementById('client-filter-search');
+    var searchText = searchInput ? searchInput.value.toLowerCase() : "";
+    var checkedStatuses = Array.from(document.querySelectorAll('.client-filter-status-cb:checked')).map(cb => cb.value);
+    var checkedServices = Array.from(document.querySelectorAll('.client-filter-service-cb:checked')).map(cb => cb.value);
+    var checkedAMs = Array.from(document.querySelectorAll('.client-filter-am-cb:checked')).map(cb => cb.value);
+
+    var filteredData = GLOBAL_CLIENT_DATA.filter(function(client) {
+      var pContact = ((client.pFirstName || "") + " " + (client.pLastName || "")).toLowerCase();
+      var matchesSearch = (client.companyName || "").toLowerCase().includes(searchText) || 
+                           (client.brandName || "").toLowerCase().includes(searchText) || 
+                           pContact.includes(searchText);
+      
+      var matchesStatus = checkedStatuses.length === 0 || checkedStatuses.includes(client.status);
+      var cServicesArray = (client.services || "").split(',').map(s => s.trim());
+      var matchesService = checkedServices.length === 0 || checkedServices.some(val => cServicesArray.includes(val));
+      var matchesAM = checkedAMs.length === 0 || checkedAMs.includes(client.acctMgr || "Unassigned");
+
+      return matchesSearch && matchesStatus && matchesService && matchesAM;
+    });
+
+    filteredData.sort(function(a, b) {
+      var valA = a[CURRENT_CLIENT_SORT_COLUMN] || '';
+      var valB = b[CURRENT_CLIENT_SORT_COLUMN] || '';
+      if (CURRENT_CLIENT_SORT_COLUMN === 'primaryContact') {
+        valA = (a.pFirstName || "") + " " + (a.pLastName || "");
+        valB = (b.pFirstName || "") + " " + (b.pLastName || "");
+      }
+      if (typeof valA === 'string') valA = valA.toLowerCase();
+      if (typeof valB === 'string') valB = valB.toLowerCase();
+      if (valA < valB) return CURRENT_CLIENT_SORT_DESC ? 1 : -1;
+      if (valA > valB) return CURRENT_CLIENT_SORT_DESC ? -1 : 1;
+      return 0;
+    });
+
+    document.querySelectorAll('.sort-icon').forEach(function(icon) { if(icon.id.startsWith('csort-')) icon.innerHTML = ''; });
+    var iconEl = document.getElementById('csort-' + CURRENT_CLIENT_SORT_COLUMN);
+    if (iconEl) iconEl.innerHTML = CURRENT_CLIENT_SORT_DESC ? '▼' : '▲'; 
+    renderClientTableRows(filteredData);
+  }
+
+  /**
+   * Compiles the visual HTML rows and appends them to the main Client Data table body.
+   * @param {Array} clients - Pre-filtered/sorted array of client objects.
+   */
+  function renderClientTableRows(clients) {
+    var tbody = document.getElementById('clientTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = ''; 
+    if (clients.length === 0) { 
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 30px;">No clients found.</td></tr>';
+      return; 
+    }
+    clients.forEach(function(client) {
+      var tr = document.createElement('tr');
+      tr.style.cursor = "pointer"; 
+      tr.onclick = function(e) { if (!e.target.closest('.btn-edit')) openReadOnlyClient(client.rowIndex); };
+      
+      var badgeClass = "badge badge-" + (client.status || "").toLowerCase();
+      tr.innerHTML = `
+        <td><strong>${client.brandName || "-"}</strong></td>
+        <td>${((client.pFirstName || "") + " " + (client.pLastName || "")).trim() || "-"}</td>
+        <td>${client.services || "-"}</td>
+        <td>${client.acctMgr || "Unassigned"}</td>
+        <td><span class="${badgeClass}">${client.status || "-"}</span></td>
+        <td><button class="btn-edit" onclick="openEditClientForm(${client.rowIndex}); event.stopPropagation();">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ========================================================================
+     6. ADD CLIENT FORM SUBMISSION
+     ======================================================================== */
+     
+  /**
+   * Prepares the UI for adding a new client. Resets all text fields, JSON arrays, and rich editors.
+   */
+  function openAddClientForm() {
+    resetAccordions('addClientView');
+    document.getElementById('addClientForm').reset();
+    document.getElementById('add-contacts-container').innerHTML = '';
+    if (addClientQuill) addClientQuill.setContents([]);
+    
+    var msgEl = document.getElementById('add-status');
+    if(msgEl) msgEl.innerHTML = '';
+    
+    toggleClientOverlay('add-client-overlay', false);
+    switchView('addClientView');
+    initClientEditors(); 
+  }
+
+  /**
+   * Bundles form data, triggers loading overlays, and sends the payload to the backend creation endpoint.
+   * On success, fetches updated lists and navigates to the Read-Only profile of the new record.
+   * @param {Event} e - HTML Form Submit Event
+   */
+  function handleAddClientSubmit(e) {
+    if(e) e.preventDefault();
+    var company = document.getElementById('add-company').value;
+    var brand = document.getElementById('add-brand').value;
+    if (!company || !brand) { 
+      var msg = document.getElementById('add-status');
+      if(msg) { msg.innerHTML = "Company Name and Brand Name are required."; msg.style.color = "var(--brand-primary)"; }
+      return; 
+    }
+
+    toggleClientOverlay('add-client-overlay', true, 'Creating Client...');
+
+    var statusEl = document.getElementById('add-status');
+    if(statusEl) { statusEl.innerHTML = ''; }
+    var submitBtn = document.getElementById('add-submit');
+    if(submitBtn) submitBtn.disabled = true;
+
+    var services = [];
+    document.querySelectorAll('input[name="add-services"]:checked').forEach(cb => services.push(cb.value));
+    
+    var clientData = {
+      companyName: company, brandName: brand, address: document.getElementById('add-address').value,
+      website: document.getElementById('add-website').value, pFirstName: document.getElementById('add-priFirst').value,
+      pLastName: document.getElementById('add-priLast').value, pEmail: document.getElementById('add-priEmail').value,
+      pPhone: document.getElementById('add-priPhone').value, pPosition: document.getElementById('add-priPosition').value,
+      pBirthday: document.getElementById('add-priBirthday').value, pAddress: document.getElementById('add-priAddress').value,
+      addContacts: getContactsJSON('add-contacts-container'), monthlyVal: document.getElementById('add-value').value,
+      startDate: document.getElementById('add-date').value, 
+      expDate: document.getElementById('add-expDate').value,
+      termCount: document.getElementById('add-termCount').value,
+      termUnit: document.getElementById('add-termUnit').value,
+      brandReg: document.getElementById('add-brandReg').value,
+      services: services.join(', '),
+      handoverNotes: (addClientQuill) ? addClientQuill.root.innerHTML : ""
+    };
+
+    google.script.run.withSuccessHandler(function(res) {
+      toggleClientOverlay('add-client-overlay', false);
+      if(statusEl) { statusEl.innerHTML = res; }
+      
+      if (res.includes("Success")) {
+        if(statusEl) statusEl.style.color = "green";
+        setTimeout(() => {
+          // Sync list and route directly to the new client's Read-Only Profile
+          google.script.run.withSuccessHandler(function(clients) {
+             GLOBAL_CLIENT_DATA = clients || [];
+             var newClient = clients.find(c => c.brandName === clientData.brandName && c.companyName === clientData.companyName);
+             if (newClient) openReadOnlyClient(newClient.rowIndex);
+             else switchView('clientListView');
+             document.getElementById('addClientForm').reset();
+          }).getClientsList();
+        }, 1000);
+      } else {
+        if(statusEl) statusEl.style.color = "var(--brand-primary)";
+        if(submitBtn) submitBtn.disabled = false;
+      }
+    }).processNewClient(clientData);
+  }
+
+  /* ========================================================================
+     7. EDIT CLIENT FORM LOADING & SUBMISSION
+     ======================================================================== */
+
+  /**
+   * Purges previous edit form data, triggers backend fetch for specific record,
+   * parses JSON components into visual rows, and prepares Quill editors.
+   * @param {number} rowIndex - Targeted index belonging to the requested Client.
+   */
+  function openEditClientForm(rowIndex) {
+    resetAccordions('editClientView');
+    switchView('editClientView');
+    initClientEditors();
+    
+    // Clear previous state immediately to prevent ghosting
+    document.getElementById('editClientForm').reset();
+    document.getElementById('edt-contacts-container').innerHTML = '';
+    document.getElementById('edt-shipping-container').innerHTML = '';
+    document.getElementById('edt-return-container').innerHTML = '';
+    document.getElementById('edt-opnotes-container').innerHTML = ''; 
+    document.querySelectorAll('input[name="edt-services"]').forEach(cb => cb.checked = false);
+    if (editClientQuill) editClientQuill.setContents([]);
+
+    var statusMsg = document.getElementById('ed-statusMsg');
+    if(statusMsg) { statusMsg.innerHTML = ''; }
+    
+    toggleClientOverlay('edit-client-overlay', true, 'Loading Client Data...');
+
+    google.script.run.withSuccessHandler(function(data) {
+      toggleClientOverlay('edit-client-overlay', false);
+      if (data.error) { 
+        if(statusMsg) { statusMsg.innerHTML = data.error; statusMsg.style.color = "var(--brand-primary)"; } 
+        return; 
+      }
+
+      document.getElementById('edt-rowIndex').value = data.rowIndex;
+      document.getElementById('edt-company').value = data.companyName || "";
+      document.getElementById('edt-brand').value = data.brandName || "";
+      document.getElementById('edt-address').value = data.address || ""; 
+      document.getElementById('edt-website').value = data.website || "";
+      document.getElementById('edt-anniversary').value = safelyFormatDate(data.anniversary);
+      document.getElementById('edt-priFirst').value = data.pFirstName || "";
+      document.getElementById('edt-priLast').value = data.pLastName || "";
+      document.getElementById('edt-priEmail').value = data.pEmail || "";
+      document.getElementById('edt-priPhone').value = data.pPhone || "";
+      document.getElementById('edt-priPosition').value = data.pPosition || "";
+      document.getElementById('edt-priBirthday').value = safelyFormatDate(data.pBirthday);
+      document.getElementById('edt-priAddress').value = data.pAddress || "";
+      if (data.addContacts) { try { JSON.parse(data.addContacts).forEach(c => addContactRow('edt-contacts-container', c)); } catch(e) {} }
+      
+      document.getElementById('edt-value').value = data.monthlyVal || "";
+      document.getElementById('edt-orig-date').value = safelyFormatDate(data.origStartDate);
+      document.getElementById('edt-current-date').value = safelyFormatDate(data.currentStartDate);
+      document.getElementById('edt-orig-expDate').value = safelyFormatDate(data.origExpDate);
+      document.getElementById('edt-current-expDate').value = safelyFormatDate(data.currentExpDate);
+      document.getElementById('edt-orig-endDate').value = safelyFormatDate(data.origEndDate);
+      document.getElementById('edt-endDate').value = safelyFormatDate(data.latestEndDate);
+      
+      document.getElementById('edt-brandReg').value = data.brandReg || "No";
+      document.getElementById('edt-termCount').value = data.termCount || "";
+      document.getElementById('edt-termUnit').value = data.termUnit || "Months";
+      document.getElementById('edt-commRate').value = data.commRate || "";
+      document.getElementById('edt-commBasis').value = data.commBasis || "";
+      document.getElementById('edt-ppcDate').value = safelyFormatDate(data.ppcDate);
+      document.getElementById('edt-dspDate').value = safelyFormatDate(data.dspDate);
+      
+      if (data.services) {
+        var srvArr = data.services.split(',').map(s => s.trim());
+        document.querySelectorAll('input[name="edt-services"]').forEach(cb => {
+          if (srvArr.includes(cb.value)) cb.checked = true;
+        });
+      }
+
+      if (data.shipAddress) { try { JSON.parse(data.shipAddress).forEach(s => addAddressRow('edt-shipping-container', s)); } catch(e) {} }
+      if (data.retAddress) { try { JSON.parse(data.retAddress).forEach(r => addAddressRow('edt-return-container', r)); } catch(e) {} }
+      
+      if (data.operationalNotes) { 
+        try { JSON.parse(data.operationalNotes).forEach(n => addOpNoteRow('edt-opnotes-container', n)); } catch(e) {} 
+      }
+
+      document.getElementById('edt-status').value = data.status || "Active";
+      document.getElementById('edt-brandCode').value = data.brandCode || "";
+      populateAccountManagersDropdown('edt-acctMgr', data.acctMgr);
+      document.getElementById('edt-folder').value = data.brandFolder || "";
+      document.getElementById('edt-remarks').value = data.remarks || "";
+      
+      if (editClientQuill) {
+        editClientQuill.clipboard.dangerouslyPasteHTML(data.handoverNotes || "");
+      }
+    }).getClientById(rowIndex);
+  }
+
+  /**
+   * Bundles updated form data, delegates JSON encoding of sub-arrays,
+   * sends payload to backend update endpoint. Resyncs and routes back to View-Only profile on success.
+   * @param {Event} e - HTML Form Submit Event
+   */
+  function handleEditClientSubmit(e) {
+    if(e) e.preventDefault();
+    
+    var btn = document.getElementById('edt-submit');
+    btn.disabled = true;
+    toggleClientOverlay('edit-client-overlay', true, 'Saving Changes...');
+
+    var statusMsg = document.getElementById('ed-statusMsg');
+    if(statusMsg) { statusMsg.innerHTML = ''; }
+    
+    var edtServices = [];
+    document.querySelectorAll('input[name="edt-services"]:checked').forEach(cb => edtServices.push(cb.value));
+
+    var clientData = {
+      rowIndex: document.getElementById('edt-rowIndex').value, companyName: document.getElementById('edt-company').value,
+      brandName: document.getElementById('edt-brand').value, address: document.getElementById('edt-address').value,
+      website: document.getElementById('edt-website').value, anniversary: document.getElementById('edt-anniversary').value,
+      pFirstName: document.getElementById('edt-priFirst').value, pLastName: document.getElementById('edt-priLast').value,
+      pEmail: document.getElementById('edt-priEmail').value, pPhone: document.getElementById('edt-priPhone').value,
+      pPosition: document.getElementById('edt-priPosition').value, pBirthday: document.getElementById('edt-priBirthday').value,
+      pAddress: document.getElementById('edt-priAddress').value, addContacts: getContactsJSON('edt-contacts-container'),
+      monthlyVal: document.getElementById('edt-value').value, 
+      currentStartDate: document.getElementById('edt-current-date').value, 
+      currentExpDate: document.getElementById('edt-current-expDate').value,
+      endDate: document.getElementById('edt-endDate').value, 
+      brandReg: document.getElementById('edt-brandReg').value,
+      termCount: document.getElementById('edt-termCount').value, termUnit: document.getElementById('edt-termUnit').value,
+      commRate: document.getElementById('edt-commRate').value, commBasis: document.getElementById('edt-commBasis').value,
+      ppcDate: document.getElementById('edt-ppcDate').value, dspDate: document.getElementById('edt-dspDate').value,
+      services: edtServices.join(', '), 
+      shipAddress: getAddressesJSON('edt-shipping-container'), retAddress: getAddressesJSON('edt-return-container'),
+      status: document.getElementById('edt-status').value, brandCode: document.getElementById('edt-brandCode').value,
+      acctMgr: document.getElementById('edt-acctMgr').value, brandFolder: document.getElementById('edt-folder').value,
+      remarks: document.getElementById('edt-remarks').value, 
+      handoverNotes: (editClientQuill) ? editClientQuill.root.innerHTML : "",
+      operationalNotes: getOpNotesJSON('edt-opnotes-container'), 
+      editor: typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User"
+    };
+    
+    google.script.run.withSuccessHandler(function(res) {
+      toggleClientOverlay('edit-client-overlay', false);
+      if(statusMsg) { statusMsg.innerHTML = res; }
+      
+      if (res.includes("Success")) {
+        if(statusMsg) statusMsg.style.color = "green";
+        setTimeout(() => {
+          // Silent list sync and route back to updated Read-Only Profile
+          google.script.run.withSuccessHandler(populateClientsTable).getClientsList();
+          openReadOnlyClient(clientData.rowIndex);
+        }, 1000);
+      } else {
+        if(statusMsg) statusMsg.style.color = "var(--brand-primary)";
+        btn.disabled = false;
+      }
+    }).updateClientRecord(clientData);
+  }
+
+  /* ========================================================================
+     8. VIEW ONLY CLIENT, OP NOTES, & HISTORY RENDERING
+     ======================================================================== */
+  window.CURRENT_VIEW_CLIENT_DATA = null;
+
+  /**
+   * Prepares the View-Only profile page. Removes ghost data instantly,
+   * activates the loading overlay, fetches fresh data, and orchestrates HTML injection.
+   * @param {number} rowIndex - Targeted index belonging to the requested Client.
+   */
+  function openReadOnlyClient(rowIndex) {
+    switchView('readOnlyClientView');
+    // Clear view immediately while loading to ensure no ghost data
+    document.getElementById('ro-title').innerText = "";
+    document.getElementById('ro-overview').innerHTML = "";
+    document.getElementById('ro-contacts').innerHTML = "";
+    document.getElementById('ro-handoverNotes').innerHTML = "";
+    document.getElementById('ro-opnotes-list').innerHTML = "";
+    document.getElementById('ro-history-container').innerHTML = "";
+    hideQuickNoteInput(); 
+
+    toggleClientOverlay('ro-client-overlay', true, 'Loading Client Profile...');
+    
+    google.script.run.withSuccessHandler(function(data) {
+      toggleClientOverlay('ro-client-overlay', false);
+      if (!data) return;
+      window.CURRENT_VIEW_CLIENT_DATA = data; 
+      
+      document.getElementById('ro-title').innerHTML = `${data.companyName} <span style="font-size: 14px; font-weight:normal; color:#888;">(${data.brandName})</span>`;
+      document.getElementById('ro-edit-btn').onclick = function() { openEditClientForm(data.rowIndex); };
+
+      var overviewHtml = `
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 30px;">
+           <div>
+              <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Brand Info</h4>
+              <p><strong>Status:</strong> ${data.status}</p>
+              <p><strong>Website:</strong> <a href="${data.website}" target="_blank">${data.website || 'N/A'}</a></p>
+              <p><strong>Company Address:</strong><br>${data.address || 'N/A'}</p>
+              <p><strong>Anniversary Date:</strong> ${safelyFormatDate(data.anniversary) || 'N/A'}</p>
+              
+              <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">Admin & Logistics</h4>
+              <p><strong>Account Manager:</strong> ${data.acctMgr || 'Unassigned'}</p>
+              <p><strong>Brand Code:</strong> ${data.brandCode || 'N/A'}</p>
+              <p><strong>Brand Folder:</strong> <a href="${data.brandFolder}" target="_blank">${data.brandFolder ? 'Open Folder' : 'N/A'}</a></p>
+              <p><strong>Brand Registered:</strong> ${data.brandReg || 'N/A'}</p>
+           </div>
+           <div>
+              <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Terms & Dates</h4>
+              <p><strong>Monthly Value:</strong> $${data.monthlyVal || '0'}</p>
+              <p><strong>Orig. Contract Start:</strong> ${safelyFormatDate(data.origStartDate) || 'N/A'}</p>
+              <p><strong>Current Start Date:</strong> ${safelyFormatDate(data.currentStartDate) || safelyFormatDate(data.origStartDate) || 'N/A'}</p>
+              <p><strong>Orig. Expiration:</strong> ${safelyFormatDate(data.origExpDate) || 'N/A'}</p>
+              <p><strong>Current Expiration:</strong> ${safelyFormatDate(data.currentExpDate) || safelyFormatDate(data.origExpDate) || 'N/A'}</p>
+              <p><strong>Original Cancel Date:</strong> ${safelyFormatDate(data.origEndDate) || 'N/A'}</p>
+              <p><strong>Latest Cancel Date:</strong> ${safelyFormatDate(data.latestEndDate) || 'N/A'}</p>
+              <p><strong>Contract Term:</strong> ${data.termCount || ''} ${data.termUnit || ''}</p>
+              <p><strong>Commission:</strong> ${data.commRate || '0'}% (${data.commBasis || 'Basis N/A'})</p>
+              
+              <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px; margin-top:20px;">Launch Dates</h4>
+              <p><strong>PPC Launch:</strong> ${safelyFormatDate(data.ppcDate) || 'N/A'}</p>
+              <p><strong>DSP Launch:</strong> ${safelyFormatDate(data.dspDate) || 'N/A'}</p>
+           </div>
+        </div>
+        
+        <div style="margin-top:20px;">
+           <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Internal Remarks</h4>
+           <p style="white-space: pre-wrap; font-style: italic; color: #555;">${data.remarks || 'No remarks.'}</p>
+        </div>
+      `;
+      document.getElementById('ro-overview').innerHTML = overviewHtml;
+      
+      var handoverNotesHtml = `
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Handover Notes</h3>
+        <div style="margin-top:15px; background: #f8fafc; padding: 20px; border-radius: 8px; border: 1px solid #e2e8f0;">
+            <div style="font-size:14px;">${data.handoverNotes || 'No handover notes recorded.'}</div>
+        </div>
+      `;
+      document.getElementById('ro-handoverNotes').innerHTML = handoverNotesHtml;
+
+      renderOpNotesList(data.operationalNotes);
+      
+      var contactsHtml = `
+        <h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px;">Contacts</h3>
+        <div style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+          <h4 style="margin-top:0; color:var(--brand-dark);">Primary Contact</h4>
+          <p><strong>Name:</strong> ${data.pFirstName} ${data.pLastName}</p>
+          <p><strong>Position:</strong> ${data.pPosition || 'N/A'}</p>
+          <p><strong>Email:</strong> <a href="mailto:${data.pEmail}">${data.pEmail}</a></p>
+          <p><strong>Phone:</strong> ${data.pPhone || 'N/A'}</p>
+          <p><strong>Birthday:</strong> ${safelyFormatDate(data.pBirthday) || 'N/A'}</p>
+          <p><strong>Direct Address:</strong> ${data.pAddress || 'N/A'}</p>
+        </div>
+      `;
+
+      if (data.addContacts && data.addContacts !== "[]") {
+        try { 
+          var adds = JSON.parse(data.addContacts); 
+          if (adds.length > 0) { 
+            contactsHtml += `<h4 style="color:var(--brand-dark);">Additional Contacts</h4>`; 
+            adds.forEach(c => { 
+              contactsHtml += `
+                <div style="background: #fff; border: 1px solid #eee; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                  <p style="margin:0 0 5px 0;"><strong>${c.firstName || ''} ${c.lastName || ''}</strong> - ${c.position || 'N/A'}</p>
+                  <p style="margin:0; font-size:13px; color:#666;">Email: ${c.email || 'N/A'} | Phone: ${c.phone || 'N/A'}</p>
+                  ${c.address ? `<p style="margin:5px 0 0 0; font-size:13px;">Addr: ${c.address}</p>` : ''}
+                </div>`; 
+            }); 
+          } 
+        } catch(e) {}
+      }
+
+      contactsHtml += `<h3 style="border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top:30px;">Physical Addresses</h3>`;
+      
+      var parseAddr = function(json, title) {
+        var html = `<h4 style="color:var(--brand-dark);">${title}</h4>`;
+        try {
+          var arr = JSON.parse(json);
+          if (!arr || arr.length === 0) return html + '<p style="color:#888; font-size:13px;">No addresses listed.</p>';
+          arr.forEach(a => {
+            html += `
+              <div style="background: #fff; border: 1px solid #eee; padding: 12px; margin-bottom: 10px; border-radius: 4px;">
+                <p style="margin:0 0 5px 0;"><strong>${a.contactName || 'Main'}</strong> | ${a.phone || ''} | ${a.email || ''}</p>
+                <p style="margin:0; font-size:13px;">${a.street || ''}, ${a.city || ''}, ${a.state || ''} ${a.countryCode || ''}</p>
+                ${a.remarks ? `<p style="margin:5px 0 0 0; font-size:12px; color:#888;">Note: ${a.remarks}</p>` : ''}
+              </div>`;
+          });
+        } catch(e) { return html + '<p>Error loading addresses.</p>'; }
+        return html;
+      };
+
+      contactsHtml += parseAddr(data.shipAddress, 'Shipping Addresses');
+      contactsHtml += '<hr style="border:0; border-top:1px solid #eee; margin:20px 0;">';
+      contactsHtml += parseAddr(data.retAddress, 'Return Addresses');
+
+      document.getElementById('ro-contacts').innerHTML = contactsHtml;
+      
+      renderHistoryTab(data.history);
+    }).getClientById(rowIndex);
+  }
+
+  /**
+   * Initiates the drag action for an Operational Note row.
+   * Sets the dragged index for reordering logic.
+   * @param {DragEvent} e - The HTML Drag Event.
+   * @param {number} index - The current index of the note being dragged.
+   */
+  function dragOpNoteStart(e, index) {
+    draggedOpNoteIndex = index;
+    e.dataTransfer.effectAllowed = 'move';
+  }
+  
+  /**
+   * Allows the dragged Operational Note to be dropped over another element.
+   * @param {DragEvent} e - The HTML Drag Event.
+   */
+  function dragOpNoteOver(e) {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  }
+  
+  /**
+   * Handles the drop action of an Operational Note, reorders the array,
+   * updates the local state, and automatically triggers a silent background save.
+   * @param {DragEvent} e - The HTML Drop Event.
+   * @param {number} targetIndex - The index where the note is being dropped.
+   */
+  function dropOpNote(e, targetIndex) {
+    e.preventDefault();
+    if (draggedOpNoteIndex === null || draggedOpNoteIndex === targetIndex) return;
+
+    var notes = [];
+    try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(err){}
+    
+    var item = notes.splice(draggedOpNoteIndex, 1)[0];
+    notes.splice(targetIndex, 0, item);
+    
+    window.CURRENT_VIEW_CLIENT_DATA.operationalNotes = JSON.stringify(notes);
+    window.CURRENT_VIEW_CLIENT_DATA.editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
+    
+    renderOpNotesList(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes);
+    
+    google.script.run.updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
+  }
+
+  /**
+   * Toggles the UI state from read-only text to an active input field for inline note editing.
+   * @param {number} index - The index of the note to edit.
+   */
+  function editOpNote(index) {
+    document.getElementById('note-view-' + index).style.display = 'none';
+    document.getElementById('note-edit-' + index).style.display = 'flex';
+    document.getElementById('opnote-row-' + index).setAttribute('draggable', 'false');
+    var input = document.getElementById('note-input-' + index);
+    input.focus();
+  }
+
+  /**
+   * Cancels the inline editing of an Operational Note, reverting changes and restoring the read-only view.
+   * @param {number} index - The index of the note being cancelled.
+   */
+  function cancelOpNoteEdit(index) {
+    document.getElementById('note-view-' + index).style.display = 'flex';
+    document.getElementById('note-edit-' + index).style.display = 'none';
+    document.getElementById('opnote-row-' + index).setAttribute('draggable', 'true');
+    var notes = [];
+    try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
+    if (notes[index]) {
+       document.getElementById('note-input-' + index).value = notes[index].content;
+    }
+  }
+
+  /**
+   * Saves the updated content of an Operational Note from the inline editor.
+   * Applies metadata (editor, timestamp) and silently updates the backend record.
+   * @param {number} index - The index of the note being saved.
+   */
+  function saveOpNoteEdit(index) {
+    var input = document.getElementById('note-input-' + index);
+    var newContent = input.value.trim();
+    if (!newContent) {
+      input.style.border = '1px solid var(--brand-primary)';
+      setTimeout(() => { input.style.border = '1px solid #ccc'; }, 2000);
+      return; 
+    }
+    var notes = [];
+    try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
+    if (!notes[index]) return;
+    if (notes[index].content === newContent) {
+       cancelOpNoteEdit(index);
+       return;
+    }
+    notes[index].content = newContent;
+    notes[index].editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
+    notes[index].timestamp = new Date().toISOString();
+    window.CURRENT_VIEW_CLIENT_DATA.operationalNotes = JSON.stringify(notes);
+    window.CURRENT_VIEW_CLIENT_DATA.editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
+
+    var listContainer = document.getElementById('ro-opnotes-list');
+    listContainer.style.opacity = '0.5';
+    listContainer.style.pointerEvents = 'none';
+
+    google.script.run.withSuccessHandler(function(res) {
+       listContainer.style.opacity = '1';
+       listContainer.style.pointerEvents = 'auto';
+       openReadOnlyClient(window.CURRENT_VIEW_CLIENT_DATA.rowIndex); 
+    }).updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
+  }
+
+  /**
+   * Reveals the quick-add input field for appending a new Operational Note directly from the view page.
+   */
+  function showQuickNoteInput() {
+    document.getElementById('ro-add-note-trigger').style.display = 'none';
+    var area = document.getElementById('ro-quick-note-area');
+    area.style.display = 'flex';
+    var input = document.getElementById('ro-quick-note-input');
+    input.value = '';
+    input.style.border = '1px solid #ccc';
+    input.focus();
+  }
+
+  /**
+   * Hides the quick-add input field and restores the "Add Note" trigger button.
+   */
+  function hideQuickNoteInput() {
+    document.getElementById('ro-add-note-trigger').style.display = 'block';
+    document.getElementById('ro-quick-note-area').style.display = 'none';
+  }
+
+  /**
+   * Captures the input from the quick-add field, pushes a new note object into the state array,
+   * and dispatches a silent backend update.
+   */
+  function addQuickOpNote() {
+    var input = document.getElementById('ro-quick-note-input');
+    var content = input.value.trim();
+    if (!content) {
+      input.style.border = '1px solid var(--brand-primary)';
+      setTimeout(() => { input.style.border = '1px solid #ccc'; }, 2000);
+      return; 
+    }
+    if (!window.CURRENT_VIEW_CLIENT_DATA) return;
+    var btn = document.getElementById('ro-quick-note-btn');
+    btn.innerText = "Saving...";
+    btn.disabled = true;
+    input.disabled = true;
+    var newNote = {
+      content: content,
+      editor: typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User",
+      timestamp: new Date().toISOString()
+    };
+    var notes = [];
+    try { notes = JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes || "[]"); } catch(e){}
+    notes.push(newNote); 
+    window.CURRENT_VIEW_CLIENT_DATA.operationalNotes = JSON.stringify(notes);
+    window.CURRENT_VIEW_CLIENT_DATA.editor = typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "Unknown User";
+
+    google.script.run.withSuccessHandler(function(res) {
+       input.value = '';
+       input.disabled = false;
+       btn.innerText = "Save Note";
+       btn.disabled = false;
+       hideQuickNoteInput();
+       openReadOnlyClient(window.CURRENT_VIEW_CLIENT_DATA.rowIndex); 
+    }).updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);
+  }
+
+  /**
+   * Renders the complete HTML list of Operational Notes, wiring up inline edit and drag-and-drop controls.
+   * @param {string} notesJson - Stringified JSON array of note objects.
+   */
+  function renderOpNotesList(notesJson) {
+    var container = document.getElementById('ro-opnotes-list');
+    if (!container) return;
+    var notes = [];
+    try { notes = JSON.parse(notesJson || "[]"); } catch(e) {}
+    if (notes.length === 0) {
+      container.innerHTML = '<p style="color:#888; font-size:13px; text-align:center; padding:20px; background:#fff; border:1px solid #eee; border-radius:4px;">No operational notes added yet.</p>';
+      return;
+    }
+    var html = '';
+    notes.forEach((note, index) => {
+      var dateStr = note.timestamp ? new Date(note.timestamp).toLocaleDateString() : 'Unknown Date';
+      var contentEscaped = note.content ? note.content.replace(/"/g, '&quot;') : '';
+      html += `
+        <div id="opnote-row-${index}" draggable="true" 
+             ondragstart="dragOpNoteStart(event, ${index})" 
+             ondragover="dragOpNoteOver(event)" 
+             ondragenter="this.style.border='2px dashed var(--brand-primary)'; this.style.backgroundColor='#f8fafc';"
+             ondragleave="this.style.border='1px solid #eee'; this.style.backgroundColor='#fff';"
+             ondrop="this.style.border='1px solid #eee'; this.style.backgroundColor='#fff'; dropOpNote(event, ${index});"
+             style="background: #fff; border: 1px solid #eee; padding: 15px; margin-bottom: 10px; border-radius: 4px; position: relative; transition: 0.2s;">
+           <div id="note-view-${index}" style="display:flex; align-items:center; gap: 10px;">
+              <div style="color: #ccc; cursor: grab;" title="Drag to reorder">&#9776;</div>
+              <div style="flex: 1; font-size: 14px; color: #333; cursor: pointer; padding: 4px; border-radius: 4px; transition: background 0.2s;" 
+                   onmouseover="this.style.backgroundColor='#f0f0f0'" 
+                   onmouseout="this.style.backgroundColor='transparent'"
+                   onclick="editOpNote(${index})" title="Click to edit">
+                ${note.content}
+              </div>
+              <div style="font-size: 10px; color: #aaa; text-align: right; white-space: nowrap; margin-left: 10px; flex-shrink: 0;">
+                 Last edited by ${note.editor || 'Unknown'} on ${dateStr}
+              </div>
+           </div>
+           <div id="note-edit-${index}" style="display:none; align-items:center; gap: 10px; width: 100%;">
+              <div style="color: transparent; width: 14px;">&#9776;</div>
+              <input type="text" id="note-input-${index}" class="form-control" value="${contentEscaped}" style="flex:1; margin: 0;">
+              <button class="btn-primary" onclick="saveOpNoteEdit(${index})" style="padding: 6px 12px; font-size: 12px; flex-shrink: 0;">Save</button>
+              <button class="btn-filter-toggle" onclick="cancelOpNoteEdit(${index})" style="padding: 6px 12px; font-size: 12px; background: transparent; border: 1px solid #ddd; flex-shrink: 0;">Cancel</button>
+           </div>
+        </div>
+      `;
+    });
+    container.innerHTML = html;
+  }
+
+  /**
+   * Parses the automated audit trail JSON and generates a chronological list of exact field-level changes.
+   * @param {string} historyJsonString - Stringified JSON array containing historical edits.
+   */
+  function renderHistoryTab(historyJsonString) {
+    var container = document.getElementById('ro-history-container');
+    if (!container) return;
+    container.innerHTML = (!historyJsonString || historyJsonString === "[]") ? '<p style="color: #888;">No history available.</p>' : '';
+    try {
+      var historyData = JSON.parse(historyJsonString);
+      historyData.forEach(entry => {
+        var editorName = entry.editor ? ` &bull; Edited by <strong>${entry.editor}</strong>` : '';
+        var html = `
+          <div style="border-left: 3px solid var(--brand-primary); padding-left: 15px; margin-bottom: 25px;">
+            <div style="font-size: 12px; color: #666; margin-bottom: 8px; font-weight: bold;">${new Date(entry.timestamp).toLocaleString()}${editorName}</div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #333;">`;
+        entry.changes.forEach(change => { 
+          if (change.old === "" && change.new.startsWith("Added")) {
+             html += `<li style="margin-bottom: 4px;"><strong>${change.field}:</strong> <em style="color:#111;">${change.new}</em></li>`;
+          } else if (change.new === "Removed") {
+             html += `<li style="margin-bottom: 4px;"><strong>${change.field}:</strong> <em style="color:#888;">Removed "${change.old}"</em></li>`;
+          } else {
+             html += `<li style="margin-bottom: 4px;"><strong>${change.field}:</strong> Changed from <em style="color:#888;">"${change.old || '(empty)'}"</em> to <em style="color:#111;">"${change.new}"</em></li>`; 
+          }
+        });
+        html += `</ul></div>`; 
+        container.innerHTML += html;
+      });
+    } catch (e) { container.innerHTML = '<p style="color: var(--brand-primary);">Error loading history.</p>'; }
+  }
+</script>

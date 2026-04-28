@@ -1,0 +1,595 @@
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
+<style>
+  .placeholder-guide { background-color: #f9f9f9; border: 1px dashed #ccc; border-radius: var(--border-radius-small); padding: 12px; margin-bottom: 15px; font-size: 13px; color: var(--brand-grey); }
+  .placeholder-tag { display: inline-block; background-color: #E3E3E3; color: var(--brand-red); padding: 4px 8px; border-radius: 4px; margin: 4px 4px 0 0; font-family: monospace; font-weight: bold; user-select: all; }
+  .btn-toggle { background: #eee; border: 1px solid #ccc; padding: 6px 12px; cursor: pointer; font-size: 12px; }
+  .btn-toggle.active { background: var(--brand-red); color: white; border-color: var(--brand-red); }
+</style>
+
+<div id="templatesListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  <div class="view-header-bar" style="margin-bottom: 15px;">
+    <h2>Template Management</h2>
+    <button class="btn-primary" onclick="openAddTemplateForm()">+ New Template</button>
+  </div>
+
+  <div class="filter-wrapper">
+    <input type="text" id="tmp-filter-search" class="filter-input" placeholder="Search templates..." onkeyup="applyTemplateFilters()">
+    <button class="btn-filter-toggle" onclick="toggleFilter('tmp-adv')">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+      Filters
+    </button>
+    
+    <div id="tmp-adv" class="filter-advanced">
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('tmp-module-drop')">Module ▼</button>
+        <div class="dropdown-content" id="tmp-module-drop">
+          <label><input type="checkbox" class="tmp-filter-mod-cb" value="Client Data" checked onchange="applyTemplateFilters()"> Client Data</label>
+          <label><input type="checkbox" class="tmp-filter-mod-cb" value="Users" checked onchange="applyTemplateFilters()"> Users</label>
+          <label><input type="checkbox" class="tmp-filter-mod-cb" value="System" checked onchange="applyTemplateFilters()"> System</label>
+        </div>
+      </div>
+
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('tmp-type-drop')">Type ▼</button>
+        <div class="dropdown-content" id="tmp-type-drop">
+          <label><input type="checkbox" class="tmp-filter-type-cb" value="Email" checked onchange="applyTemplateFilters()"> Email</label>
+          <label><input type="checkbox" class="tmp-filter-type-cb" value="Document" checked onchange="applyTemplateFilters()"> Document</label>
+        </div>
+      </div>
+      
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('tmp-wrapper-drop')">Wrapper ▼</button>
+        <div class="dropdown-content" id="tmp-wrapper-drop">
+          <label><input type="checkbox" class="tmp-filter-wrapper-cb" value="Internal" checked onchange="applyTemplateFilters()"> Internal</label>
+          <label><input type="checkbox" class="tmp-filter-wrapper-cb" value="External" checked onchange="applyTemplateFilters()"> External</label>
+          <label><input type="checkbox" class="tmp-filter-wrapper-cb" value="Recognition" checked onchange="applyTemplateFilters()"> Recognition</label>
+        </div>
+      </div>
+      
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('tmp-status-drop')">Status ▼</button>
+        <div class="dropdown-content" id="tmp-status-drop">
+          <label><input type="checkbox" class="tmp-filter-status-cb" value="Active" checked onchange="applyTemplateFilters()"> Active</label>
+          <label><input type="checkbox" class="tmp-filter-status-cb" value="Inactive" onchange="applyTemplateFilters()"> Inactive</label>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Module</th>
+          <th>Type</th>
+          <th>Wrapper Type</th> 
+          <th>Status</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody id="templateTableBody">
+        <tr><td colspan="6" style="text-align:center; padding: 20px;">Loading templates...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<div id="readOnlyTemplateView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('templatesListView')">&#8592; Back to Templates</button>
+  
+  <div class="view-header-bar" style="margin-bottom: 15px;">
+    <h2 id="ro-tmp-title">Template Preview</h2>
+    <div style="display: flex; gap: 10px; align-items: center;">
+      <span id="ro-tmp-loading" style="font-size: 13px; color: var(--brand-grey); margin-right: 10px;"></span>
+      <button class="btn-primary" onclick="promptTestEmail()">Send Test Email</button>
+    </div>
+  </div>
+
+  <div class="form-wrapper" style="max-width: 1000px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px;">
+      <h3 style="margin: 0;">Template Details</h3>
+      <button id="rot-edit-btn" class="btn-edit" onclick="openEditFromReadOnly()">Edit Template</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; font-size: 14px; background: #f9f9f9; padding: 20px; border-radius: 8px;">
+      <input type="hidden" id="ro-tmp-rowIndex">
+      <div><strong>Module:</strong> <span id="ro-tmp-module" style="color: #555; display:block;"></span></div>
+      <div><strong>Type:</strong> <span id="ro-tmp-type" style="color: #555; display:block;"></span></div>
+      <div><strong>Status:</strong> <div id="ro-tmp-status" style="margin-top:5px;"></div></div>
+      <div><strong>Wrapper:</strong> <span id="ro-tmp-wrapper" style="color: #555; display:block;"></span></div>
+      <div><strong>Trigger:</strong> <span id="ro-tmp-trigger" style="color: #555; display:block;"></span></div>
+      <div><strong>Subject:</strong> <span id="ro-tmp-subject" style="color: #555; display:block;"></span></div>
+    </div>
+
+    <div style="border: 1px solid #ddd; border-radius: 8px; overflow: hidden; background: #f4f6f9;">
+      <iframe id="ro-tmp-preview" style="width: 100%; height: 500px; border: none; background-color: #fff;"></iframe>
+    </div>
+  </div>
+</div>
+
+<div id="addTemplateView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('templatesListView')">&#8592; Back to Templates</button>
+  <div class="view-header-bar"><h2>Add New Template</h2></div>
+
+  <div class="form-wrapper">
+    <div class="form-row">
+      <div class="form-group"><label>Template Name *</label><input type="text" id="add-name" class="form-control"></div>
+      <div class="form-group">
+        <label>Type</label>
+        <select id="add-type" class="form-control" onchange="toggleTemplateType('add'); updateTriggerOptions('add');">
+          <option value="Email">Email</option>
+          <option value="Document">Document</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Target Module</label>
+        <select id="add-module" class="form-control" onchange="updateTriggerOptions('add')">
+          <option value="Client Data">Client Data</option>
+          <option value="Users">Users</option>
+          <option value="System">System</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group"><label>Trigger Event</label><select id="add-trigger" class="form-control"></select></div>
+      <div class="form-group">
+        <label>Status</label>
+        <select id="add-status" class="form-control">
+          <option value="Active">Active</option>
+          <option value="Inactive">Inactive</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Wrapper Type</label>
+        <select id="add-wrapper" class="form-control">
+          <option value="Internal">Internal</option>
+          <option value="External">External</option>
+          <option value="Recognition">Recognition</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="form-group"><label>Email Subject</label><input type="text" id="add-subject" class="form-control"></div>
+
+    <div id="add-email-editor-section" class="form-group" style="margin-top: 25px;">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+        <label style="margin: 0; font-weight: 600;">Body Content</label>
+        <button type="button" onclick="togglePlaceholderModal(true)" style="border: none; background: none; color: var(--brand-red); font-size: 12px; cursor: pointer; text-decoration: underline;">View Placeholders</button>
+      </div>
+      
+      <div style="display: flex; background: #eee; border-radius: 4px; padding: 2px; margin-bottom: 10px; width: fit-content;">
+        <button type="button" id="add-btn-rich" class="btn-toggle active" onclick="toggleEditor('add', 'rich')">Rich Text</button>
+        <button type="button" id="add-btn-source" class="btn-toggle" onclick="toggleEditor('add', 'source')">Source</button>
+      </div>
+
+      <div id="add-quill-container" style="border: 1px solid #ccc; border-radius: 4px; background: #fff;"><div id="add-quill-editor" style="height: 250px;"></div></div>
+      <textarea id="add-source-editor" style="display:none; width: 100%; height: 250px; font-family: monospace; border: 1px solid #ccc; padding: 10px; box-sizing: border-box;"></textarea>
+    </div>
+
+    <div id="add-doc-url-section" class="form-group" style="display: none; margin-top: 25px;">
+      <label>Google Doc URL</label>
+      <input type="text" id="add-doc-url" class="form-control" placeholder="Paste URL here...">
+    </div>
+
+    <div class="action-buttons"><button class="btn-primary" id="add-tmp-submit" onclick="handleAddTemplateSubmit()">Save Template</button></div>
+    <div id="add-tmp-status" class="status-msg"></div>
+  </div>
+</div>
+
+<div id="editTemplateView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('templatesListView')">&#8592; Back to Templates</button>
+  <div class="view-header-bar"><h2>Edit Template</h2></div>
+
+  <div class="form-wrapper">
+    <form id="editTemplateForm" onsubmit="handleEditTemplateSubmit(event)">
+      <input type="hidden" id="edt-rowIndex">
+      <div class="form-row">
+        <div class="form-group"><label>Template Name *</label><input type="text" id="edt-name" required class="form-control"></div>
+        <div class="form-group">
+          <label>Type</label>
+          <select id="edt-type" class="form-control" onchange="toggleTemplateType('edt'); updateTriggerOptions('edt');">
+            <option value="Email">Email</option>
+            <option value="Document">Document</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Target Module</label>
+          <select id="edt-module" class="form-control" onchange="updateTriggerOptions('edt')">
+            <option value="Client Data">Client Data</option>
+            <option value="Users">Users</option>
+            <option value="System">System</option>
+          </select>
+        </div>
+        <div class="form-group"><label>Trigger Event</label><select id="edt-trigger" class="form-control"></select></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Status</label>
+          <select id="edt-status" class="form-control"><option value="Active">Active</option><option value="Inactive">Inactive</option></select>
+        </div>
+        <div class="form-group">
+          <label>Wrapper Type</label>
+          <select id="edt-wrapper" class="form-control">
+            <option value="Internal">Internal</option>
+            <option value="External">External</option>
+            <option value="Recognition">Recognition</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label>Email Subject</label><input type="text" id="edt-subject" class="form-control"></div>
+
+      <div id="edt-email-editor-section" class="form-group" style="margin-top: 25px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <label style="margin: 0; font-weight: 600;">Body Content</label>
+          <button type="button" onclick="togglePlaceholderModal(true)" style="border: none; background: none; color: var(--brand-red); font-size: 12px; cursor: pointer; text-decoration: underline;">View Placeholders</button>
+        </div>
+        
+        <div style="display: flex; background: #eee; border-radius: 4px; padding: 2px; margin-bottom: 10px; width: fit-content;">
+          <button type="button" id="edt-btn-rich" class="btn-toggle active" onclick="toggleEditor('edt', 'rich')">Rich Text</button>
+          <button type="button" id="edt-btn-source" class="btn-toggle" onclick="toggleEditor('edt', 'source')">Source</button>
+        </div>
+
+        <div id="edit-quill-container" style="border: 1px solid #ccc; background: #fff;"><div id="edit-quill-editor" style="height: 250px;"></div></div>
+        <textarea id="edt-source-editor" style="display:none; width: 100%; height: 250px; font-family: monospace; border: 1px solid #ccc; padding: 10px; box-sizing: border-box;"></textarea>
+      </div>
+
+      <div id="edt-doc-url-section" class="form-group" style="display: none; margin-top: 25px;">
+        <label>Google Doc URL</label>
+        <input type="text" id="edt-doc-url" class="form-control">
+      </div>
+      <div class="action-buttons"><button type="submit" class="btn-primary" id="edt-submit">Update Template</button></div>
+    </form>
+    <div id="edt-tmp-status" class="status-msg"></div>
+  </div>
+</div>
+
+<div id="placeholderModal" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; justify-content: center; align-items: center;">
+  <div style="background: white; width: 700px; padding: 25px; border-radius: 8px; box-shadow: 0 10px 25px rgba(0,0,0,0.2);">
+    <h3 style="margin-top: 0;">Available Placeholders</h3>
+    <div class="placeholder-guide">Copy and paste these tags into your body content. They will be replaced with real data when emails are sent.</div>
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; max-height: 350px; overflow-y: auto;">
+      <div>
+        <p><strong>Clients:</strong></p>
+        <div class="placeholder-tag">{{companyName}}</div><div class="placeholder-tag">{{brandName}}</div>
+        <div class="placeholder-tag">{{priFirstName}}</div><div class="placeholder-tag">{{priLastName}}</div>
+        <div class="placeholder-tag">{{priEmail}}</div><div class="placeholder-tag">{{services}}</div>
+        <div class="placeholder-tag">{{monthlyContractValue}}</div><div class="placeholder-tag">{{contractStartDate}}</div>
+      </div>
+      <div>
+        <p><strong>Users:</strong></p>
+        <div class="placeholder-tag">{{username}}</div><div class="placeholder-tag">{{firstName}}</div>
+        <div class="placeholder-tag">{{lastName}}</div><div class="placeholder-tag">{{role}}</div>
+        <div class="placeholder-tag">{{hireDate}}</div><div class="placeholder-tag">{{birthday}}</div>
+      </div>
+    </div>
+    <div style="text-align: right; margin-top: 25px;"><button class="btn-primary" onclick="togglePlaceholderModal(false)">Close</button></div>
+  </div>
+</div>
+
+<script>
+  /* ========================================================================
+     1. GLOBAL STATE & CONSTANTS
+     ======================================================================== */
+  var GLOBAL_TMP_DATA = [];
+  var TEMPLATE_TRIGGERS = {
+    "Client Data": ["None", "Client Welcome Email", "New Client Announcement"],
+    "Users": ["None", "New User Welcome", "Password Reset"],
+    "System": ["None", "System Alert"]
+  };
+  var addQuill, editQuill;
+  var addEditorMode = 'rich';
+  var editEditorMode = 'rich';
+
+  /** * Initializes Quill editors once on page load.
+   * Standardizes toolbar options for consistent formatting.
+   */
+  document.addEventListener("DOMContentLoaded", function() {
+    if (typeof Quill !== 'undefined') {
+      addQuill = new Quill('#add-quill-editor', { theme: 'snow', modules: { toolbar: [
+        [{ 'header': [1, 2, false] }], ['bold', 'italic', 'underline'], [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link', 'image', 'clean']
+      ]}});
+      editQuill = new Quill('#edit-quill-editor', { theme: 'snow', modules: { toolbar: [
+        [{ 'header': [1, 2, false] }], ['bold', 'italic', 'underline'], [{ 'color': [] }, { 'background': [] }],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }], ['link', 'image', 'clean']
+      ]}});
+    }
+  });
+
+  /* ========================================================================
+     2. DATA FETCHING & FILTERING
+     ======================================================================== */
+  
+  /**
+   * Triggers the backend call to fetch the list of templates.
+   */
+  function loadTemplatesTable() {
+    google.script.run.withSuccessHandler(function(data) {
+      GLOBAL_TMP_DATA = data;
+      applyTemplateFilters();
+    }).getTemplatesList();
+  }
+
+  /**
+   * Applies client-side filtering to the template dataset.
+   * Filters by search text, module, type, status, and wrapper.
+   */
+  function applyTemplateFilters() {
+    var search = document.getElementById('tmp-filter-search').value.toLowerCase();
+    var checkedMods = Array.from(document.querySelectorAll('.tmp-filter-mod-cb:checked')).map(cb => cb.value);
+    var checkedTypes = Array.from(document.querySelectorAll('.tmp-filter-type-cb:checked')).map(cb => cb.value);
+    var checkedStatuses = Array.from(document.querySelectorAll('.tmp-filter-status-cb:checked')).map(cb => cb.value);
+    var activeWrappers = Array.from(document.querySelectorAll('.tmp-filter-wrapper-cb:checked')).map(cb => cb.value);
+
+    var filtered = GLOBAL_TMP_DATA.filter(function(t) {
+      var matchSearch = (t.templateName || "").toLowerCase().includes(search);
+      var matchMod = checkedMods.length === 0 || checkedMods.includes((t.targetModule || "").trim());
+      var matchType = checkedTypes.length === 0 || checkedTypes.includes((t.type || "").trim());
+      var matchStatus = checkedStatuses.length === 0 || checkedStatuses.includes((t.status || "").trim());
+      var matchWrapper = activeWrappers.length === 0 || activeWrappers.includes(t.wrapperType || "Internal");
+      return matchSearch && matchMod && matchType && matchStatus && matchWrapper;
+    });
+    renderTemplateTableRows(filtered);
+  }
+
+  /**
+   * Renders the filtered template list into the DOM table.
+   * @param {Array<Object>} templates - List of templates to display.
+   */
+  function renderTemplateTableRows(templates) {
+    var tbody = document.getElementById('templateTableBody');
+    tbody.innerHTML = '';
+    if (templates.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 20px;">No templates found.</td></tr>';
+      return;
+    }
+    templates.forEach(function(t) {
+      var statusClass = (t.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
+      tbody.innerHTML += `
+        <tr>
+          <td style="cursor: pointer;" onclick="openReadOnlyTemplate(${t.rowIndex})"><strong>${t.templateName}</strong></td>
+          <td>${t.targetModule}</td>
+          <td>${t.type}</td>
+          <td>${t.wrapperType || 'Internal'}</td>
+          <td><span class="badge ${statusClass}">${t.status}</span></td>
+          <td><button class="btn-edit" onclick="openEditTemplateForm(${t.rowIndex})">Edit</button></td>
+        </tr>`;
+    });
+  }
+
+  /* ========================================================================
+     3. VIEW & PREVIEW LOGIC
+     ======================================================================== */
+  
+  /**
+   * Navigates to the read-only preview view for a specific template.
+   * @param {number} rowIndex - The spreadsheet row index of the template.
+   */
+  function openReadOnlyTemplate(rowIndex) {
+    switchView('readOnlyTemplateView');
+    var loader = document.getElementById('ro-tmp-loading');
+    loader.innerHTML = "Fetching template data...";
+    
+    google.script.run.withSuccessHandler(function(data) {
+      document.getElementById('ro-tmp-rowIndex').value = data.rowIndex;
+      document.getElementById('ro-tmp-title').innerText = data.templateName;
+      document.getElementById('ro-tmp-module').innerText = data.targetModule;
+      document.getElementById('ro-tmp-type').innerText = data.type;
+      document.getElementById('ro-tmp-trigger').innerText = data.triggerEvent;
+      document.getElementById('ro-tmp-subject').innerText = data.subject || "N/A";
+      document.getElementById('ro-tmp-wrapper').innerText = data.wrapperType || "Internal";
+      
+      var badgeClass = (data.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
+      document.getElementById('ro-tmp-status').innerHTML = `<span class="badge ${badgeClass}">${data.status}</span>`;
+
+      if (data.type === 'Document') {
+        var docUrl = data.bodyContent || "";
+        if (docUrl.includes('/edit')) docUrl = docUrl.split('/edit')[0] + '/preview';
+        document.getElementById('ro-tmp-preview').src = docUrl;
+        loader.innerHTML = "";
+      } else {
+        google.script.run.withSuccessHandler(function(html) {
+          document.getElementById('ro-tmp-preview').srcdoc = html;
+          loader.innerHTML = "";
+        }).getRenderedTemplatePreview(rowIndex);
+      }
+    }).getTemplateById(rowIndex);
+  }
+
+  /**
+   * Triggers a test email for the currently viewed template.
+   */
+  function promptTestEmail() {
+    var email = prompt("Enter the email address to receive the test template:", CURRENT_USERNAME);
+    if (!email) return;
+    var idx = document.getElementById('ro-tmp-rowIndex').value;
+    document.getElementById('ro-tmp-loading').innerHTML = "Sending test...";
+    google.script.run.withSuccessHandler(function(res) {
+      alert(res);
+      document.getElementById('ro-tmp-loading').innerHTML = "";
+    }).sendTestEmailAction(idx, email);
+  }
+
+  /* ========================================================================
+     4. FORM HANDLERS
+     ======================================================================== */
+  
+  /**
+   * Resets and opens the form to add a new template.
+   */
+  function openAddTemplateForm() {
+    switchView('addTemplateView');
+    document.getElementById('add-name').value = '';
+    document.getElementById('add-type').value = 'Email';
+    document.getElementById('add-module').value = 'Client Data';
+    updateTriggerOptions('add');
+    document.getElementById('add-subject').value = '';
+    addQuill.setContents([]);
+    document.getElementById('add-source-editor').value = '';
+    document.getElementById('add-doc-url').value = '';
+    toggleTemplateType('add');
+    toggleEditor('add', 'rich');
+  }
+
+  /**
+   * Fetches data and opens the form to edit an existing template.
+   * @param {number} rowIndex - The spreadsheet row index of the template.
+   */
+  function openEditTemplateForm(rowIndex) {
+    switchView('editTemplateView');
+    document.getElementById('edt-tmp-status').innerHTML = "Loading...";
+    google.script.run.withSuccessHandler(function(data) {
+      document.getElementById('edt-tmp-status').innerHTML = "";
+      document.getElementById('edt-rowIndex').value = data.rowIndex;
+      document.getElementById('edt-name').value = data.templateName;
+      document.getElementById('edt-type').value = data.type;
+      document.getElementById('edt-module').value = data.targetModule;
+      updateTriggerOptions('edt', data.triggerEvent);
+      document.getElementById('edt-status').value = data.status;
+      document.getElementById('edt-wrapper').value = data.wrapperType;
+      document.getElementById('edt-subject').value = data.subject;
+      
+      if (data.type === 'Document') {
+        document.getElementById('edt-doc-url').value = data.bodyContent;
+      } else {
+        editQuill.root.innerHTML = data.bodyContent;
+        document.getElementById('edt-source-editor').value = data.bodyContent;
+      }
+      toggleTemplateType('edt');
+      toggleEditor('edt', 'rich');
+    }).getTemplateById(rowIndex);
+  }
+
+  /**
+   * Validates and submits the new template form.
+   */
+  function handleAddTemplateSubmit() {
+    var type = document.getElementById('add-type').value;
+    var body = (type === 'Document') ? document.getElementById('add-doc-url').value : (addEditorMode === 'rich' ? addQuill.root.innerHTML : document.getElementById('add-source-editor').value);
+    
+    var obj = {
+      templateName: document.getElementById('add-name').value,
+      type: type,
+      targetModule: document.getElementById('add-module').value,
+      triggerEvent: document.getElementById('add-trigger').value,
+      subject: document.getElementById('add-subject').value,
+      bodyContent: body,
+      status: document.getElementById('add-status').value,
+      wrapperType: document.getElementById('add-wrapper').value
+    };
+    
+    if (!obj.templateName) { alert("Please provide a template name."); return; }
+    
+    document.getElementById('add-tmp-status').innerHTML = "Saving...";
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('add-tmp-status').innerHTML = res;
+      setTimeout(() => { switchView('templatesListView'); loadTemplatesTable(); }, 1500);
+    }).processNewTemplate(obj);
+  }
+
+  /**
+   * Validates and submits the edit template form.
+   * @param {Event} e - The form submission event.
+   */
+  function handleEditTemplateSubmit(e) {
+    if (e) e.preventDefault();
+    var type = document.getElementById('edt-type').value;
+    var body = (type === 'Document') ? document.getElementById('edt-doc-url').value : (editEditorMode === 'rich' ? editQuill.root.innerHTML : document.getElementById('edt-source-editor').value);
+    
+    var obj = {
+      rowIndex: document.getElementById('edt-rowIndex').value,
+      templateName: document.getElementById('edt-name').value,
+      type: type,
+      targetModule: document.getElementById('edt-module').value,
+      triggerEvent: document.getElementById('edt-trigger').value,
+      subject: document.getElementById('edt-subject').value,
+      bodyContent: body,
+      status: document.getElementById('edt-status').value,
+      wrapperType: document.getElementById('edt-wrapper').value
+    };
+    
+    document.getElementById('edt-tmp-status').innerHTML = "Updating...";
+    google.script.run.withSuccessHandler(function(res) {
+      document.getElementById('edt-tmp-status').innerHTML = res;
+      setTimeout(() => { switchView('templatesListView'); loadTemplatesTable(); }, 1500);
+    }).updateTemplateRecord(obj);
+  }
+
+  /* ========================================================================
+     5. UI HELPERS
+     ======================================================================== */
+  
+  /**
+   * Toggles form sections based on template type (Email vs Document).
+   * @param {string} prefix - The form prefix ('add' or 'edt').
+   */
+  function toggleTemplateType(prefix) {
+    var type = document.getElementById(prefix + '-type').value;
+    document.getElementById(prefix + '-email-editor-section').style.display = (type === 'Email') ? 'block' : 'none';
+    document.getElementById(prefix + '-doc-url-section').style.display = (type === 'Document') ? 'block' : 'none';
+  }
+
+  /**
+   * Switches the editor between Rich Text (Quill) and HTML Source (Textarea).
+   * Syncs content between the two modes to prevent data loss.
+   * @param {string} prefix - The form prefix ('add' or 'edt').
+   * @param {string} mode - The target mode ('rich' or 'source').
+   */
+  function toggleEditor(prefix, mode) {
+    var isRich = (mode === 'rich');
+    var quillCont = document.getElementById(prefix + '-quill-container');
+    var sourceArea = document.getElementById(prefix + '-source-editor');
+    var qInstance = (prefix === 'add') ? addQuill : editQuill;
+
+    if (isRich) {
+      qInstance.root.innerHTML = sourceArea.value;
+      document.getElementById(prefix + '-btn-rich').classList.add('active');
+      document.getElementById(prefix + '-btn-source').classList.remove('active');
+    } else {
+      sourceArea.value = qInstance.root.innerHTML;
+      document.getElementById(prefix + '-btn-source').classList.add('active');
+      document.getElementById(prefix + '-btn-rich').classList.remove('active');
+    }
+    
+    quillCont.style.display = isRich ? 'block' : 'none';
+    sourceArea.style.display = isRich ? 'none' : 'block';
+    if (prefix === 'add') addEditorMode = mode; else editEditorMode = mode;
+  }
+
+  /**
+   * Toggles the visibility of the placeholder helper modal.
+   * @param {boolean} show - True to show, false to hide.
+   */
+  function togglePlaceholderModal(show) { document.getElementById('placeholderModal').style.display = show ? 'flex' : 'none'; }
+
+  /**
+   * Dynamically updates the available trigger events based on the selected module.
+   * @param {string} prefix - The form prefix ('add' or 'edt').
+   * @param {string} selectedValue - (Optional) The value to pre-select.
+   */
+  function updateTriggerOptions(prefix, selectedValue) {
+    var mod = document.getElementById(prefix + '-module').value;
+    var select = document.getElementById(prefix + '-trigger');
+    select.innerHTML = '';
+    (TEMPLATE_TRIGGERS[mod] || ["None"]).forEach(function(t) {
+      var opt = document.createElement('option');
+      opt.value = t; opt.text = t; select.appendChild(opt);
+    });
+    if (selectedValue) select.value = selectedValue;
+  }
+
+  /**
+   * Helper to switch to the edit form from the read-only preview.
+   */
+  function openEditFromReadOnly() {
+    var idx = document.getElementById('ro-tmp-rowIndex').value;
+    openEditTemplateForm(idx);
+  }
+</script>

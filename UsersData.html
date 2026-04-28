@@ -1,17 +1,19 @@
 <!-- 
+  [SPARKHUB INTEGRITY HEADER: START]
+  FILE: UsersData.html
+  VERSION: 1.3 (Full Restoration + UserBar Plugin Integration)
+  SYNC STATUS: Fully Synchronized with Users.gs & Index.html
+-->
+
+<!-- 
   Users Management Module - Frontend
-  Standardized under MR Hub Architecture Blueprint.
+  Standardized under SparkHub Architecture Blueprint.
   
   CORE RESPONSIBILITIES:
-  - Staff Profile Management (Add/Edit/View).
-  - Role-Based Access Control (RBAC) synchronization.
-  - Profile Photo processing with bitmap compression.
-  
-  INTEGRITY FEATURES:
-  - Modular Loading Overlays for all async operations.
-  - Direct routing to specific user profiles after save.
-  - Strict 1:1 Aspect Ratio enforcement for all photo previews.
-  - Client-parity sorting logic and UI filters.
+  - Staff Directory & RBAC Management.
+  - Profile Photo Processing (Canvas Compression).
+  - Detailed Position & Employment Tracking.
+  - Plugin: UserBar (Header Greetings & Profile Quick-Access).
 -->
 
 <style>
@@ -32,7 +34,7 @@
     width: 40px;
     height: 40px;
     border: 4px solid #f3f3f3;
-    border-top: 4px solid var(--brand-red);
+    border-top: 4px solid var(--brand-primary);
     border-radius: 50%;
     animation: spin-user 1s linear infinite;
   }
@@ -41,39 +43,53 @@
     100% { transform: rotate(360deg); }
   }
 
-  /* --- Layout & Photo Dimension Constraints --- */
+  /* Ensure wrappers are positioned for overlays */
   #addUserView .form-wrapper, 
   #editUserView .form-wrapper,
   #readOnlyUserView .form-wrapper { 
     position: relative; 
     min-height: 400px;
   }
-  
+
+  /* Profile Photo Styles */
   .profile-photo-square {
-    width: 80px; 
-    height: 80px; 
-    min-width: 80px; 
-    flex-shrink: 0; 
-    aspect-ratio: 1/1; 
-    border-radius: 10px; 
-    object-fit: cover; 
-    border: 1px solid #ddd; 
+    width: 80px;
+    height: 80px;
+    min-width: 80px;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 1px solid #ddd;
     background-color: #f9f9f9;
   }
-  
+
   .profile-photo-large {
-    width: 150px; 
-    height: 150px; 
-    min-width: 150px; 
-    flex-shrink: 0; 
-    aspect-ratio: 1/1; 
-    border-radius: 10px; 
-    object-fit: cover; 
-    border: 4px solid #fff; 
-    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+    width: 150px;
+    height: 150px;
+    min-width: 150px;
+    aspect-ratio: 1 / 1;
+    border-radius: 10px;
+    object-fit: cover;
+    border: 4px solid #fff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
     background-color: #f9f9f9;
   }
 </style>
+
+<!-- UI: User Popup (Plugin: UserBar Container) -->
+<div id="user-popup" class="header-popup" style="display:none;">
+  <div style="text-align: center; padding: 10px;">
+    <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+       <img id="user-popup-photo" src="" class="profile-photo-square" style="width: 60px; height: 60px; border-radius: 50%;">
+    </div>
+    <h4 id="user-popup-name" style="margin:0;">User</h4>
+    <p id="user-popup-role" style="font-size:11px; color:#888; margin:5px 0 15px 0;"></p>
+    <div style="border-top: 1px solid #eee; padding-top: 15px; display: flex; flex-direction: column; gap: 8px;">
+       <button class="btn-edit" onclick="switchView('readOnlyUserView'); document.getElementById('user-popup').style.display='none';" style="width:100%;">My Profile</button>
+       <button class="btn-edit" onclick="handleSignOut()" style="width:100%; border-color: #ddd; color: #666;">Sign Out</button>
+    </div>
+  </div>
+</div>
 
 <!-- List View: Master User Directory -->
 <div id="usersListView" class="container" style="display: none;">
@@ -87,10 +103,11 @@
   <div class="filter-wrapper">
     <input type="text" id="user-filter-search" class="filter-input" placeholder="Search users..." onkeyup="applyUserFilters()">
     <button class="btn-filter-toggle" onclick="toggleFilter('user-adv')">
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-      Filters
+       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+       Filters
     </button>
-    <div id="user-adv" class="filter-advanced" style="display:none;">
+  
+    <div id="user-adv" class="filter-advanced">
       <div class="custom-dropdown">
         <button class="dropdown-btn" onclick="toggleDropdown('user-status-drop')">Status ▼</button>
         <div class="dropdown-content" id="user-status-drop">
@@ -98,7 +115,17 @@
           <label><input type="checkbox" class="user-filter-status-cb" value="Inactive" onchange="applyUserFilters()"> Inactive</label>
         </div>
       </div>
-      <button type="button" class="btn-filter-toggle" onclick="resetUserFilters()" style="background: transparent; color: var(--brand-red); border: 1px solid var(--brand-red);">Reset</button>
+
+      <div class="custom-dropdown">
+        <button class="dropdown-btn" onclick="toggleDropdown('user-role-drop')">Role ▼</button>
+        <div class="dropdown-content" id="user-role-drop">
+          <label><input type="checkbox" class="user-filter-role-cb" value="Admin" checked onchange="applyUserFilters()"> Admin</label>
+          <label><input type="checkbox" class="user-filter-role-cb" value="Account Manager" checked onchange="applyUserFilters()"> Account Manager</label>
+          <label><input type="checkbox" class="user-filter-role-cb" value="Account Support" checked onchange="applyUserFilters()"> Account Support</label>
+          <label><input type="checkbox" class="user-filter-role-cb" value="Sales Manager" checked onchange="applyUserFilters()"> Sales Manager</label>
+        </div>
+      </div>
+      <button type="button" class="btn-reset-filters" onclick="resetUserFilters()">Reset</button>
     </div>
   </div>
 
@@ -107,11 +134,11 @@
       <thead>
         <tr>
           <th class="sortable" onclick="handleUserSort('username')">Username <span id="usort-username" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('fullName')">Name <span id="usort-fullName" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('workEmail')">Work Email <span id="usort-workEmail" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('role')">Role <span id="usort-role" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('position')">Position <span id="usort-position" class="sort-icon"></span></th>
-          <th class="sortable" onclick="handleUserSort('status')">Status <span id="usort-status" class="sort-icon"></span></th>
+          <th class="sortable" onclick="handleUserSort('firstName')">Name <span id="usort-firstName" class="sort-icon"></span></th>
+          <th>Work Email</th>
+          <th>Role</th>
+          <th>Position</th>
+          <th>Status</th>
           <th>Action</th>
         </tr>
       </thead>
@@ -125,26 +152,30 @@
 <!-- Add User Form -->
 <div id="addUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
+  
   <div class="form-wrapper">
-    <div id="add-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span>Creating User...</span></div>
-    <h2 style="margin-top:0;">Add New System User</h2>
-    <form id="addUserForm" onsubmit="handleAddUserSubmit(event)">
+    <div id="add-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span>Creating User Profile...</span></div>
+    <h2 style="margin-top: 0; color: var(--brand-dark);">Add New System User</h2>
+    
+    <form id="addUserForm" onsubmit="handleAddUserSubmit(event)" novalidate>
+      
       <button type="button" class="accordion active" onclick="toggleAccordion(this)">Basic Credentials</button>
       <div class="panel" style="display: block;">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group">
-            <label>Profile Photo</label>
-            <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="add-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-square">
-              <input type="file" id="add-photo-input" accept="image/*" onchange="previewPhoto(this, 'add-photo-preview')">
-            </div>
-          </div>
+        <div class="form-row" style="margin-top: 15px;">
+           <div class="form-group">
+             <label>Profile Photo</label>
+             <div style="display: flex; align-items: center; gap: 15px;">
+                <img id="add-user-photo-preview" src="https://via.placeholder.com/150?text=User" class="profile-photo-square">
+                <input type="file" id="add-user-photo-input" accept="image/*" onchange="previewUserPhoto(this, 'add-user-photo-preview')">
+             </div>
+           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Username *</label><input type="text" id="add-user-username" required class="form-control"></div>
-          <div class="form-group"><label>Role *</label>
-            <select id="add-user-role" required class="form-control">
-              <option value="Administrator">Administrator</option>
+          <div class="form-group"><label>Username *</label><input type="text" id="add-user-username" class="form-control" required placeholder="Unique Login Name"></div>
+          <div class="form-group">
+            <label>System Role *</label>
+            <select id="add-user-role" class="form-control" required>
+              <option value="Admin">Admin</option>
               <option value="Account Manager">Account Manager</option>
               <option value="Account Support">Account Support</option>
               <option value="Sales Manager">Sales Manager</option>
@@ -152,77 +183,88 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Work Email *</label><input type="email" id="add-user-email" required class="form-control"></div>
-          <div class="form-group"><label>Status</label>
+          <div class="form-group"><label>Work Email *</label><input type="email" id="add-user-workemail" class="form-control" required placeholder="primary@rhinocentral.com"></div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name *</label><input type="text" id="add-user-first" class="form-control" required></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" id="add-user-last" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Birthday</label><input type="date" id="add-user-bday" class="form-control"></div>
+          <div class="form-group"><label>Personal Email</label><input type="email" id="add-user-personalemail" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone Number</label><input type="text" id="add-user-phone" class="form-control"></div>
+          <div class="form-group"><label>Facebook Profile URL</label><input type="url" id="add-user-fb" class="form-control"></div>
+        </div>
+        <div class="form-group"><label>Home Address</label><input type="text" id="add-user-address" class="form-control"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Position & Employment</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Position Title</label><input type="text" id="add-user-position" class="form-control" placeholder="e.g. Senior Account Manager"></div>
+          <div class="form-group">
+            <label>Employment Type</label>
+            <select id="add-user-employment" class="form-control">
+              <option value="Full-Time">Full-Time</option>
+              <option value="Part-Time">Part-Time</option>
+              <option value="Contract">Contract</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date Hired</label><input type="date" id="add-user-hired" class="form-control"></div>
+          <div class="form-group">
+            <label>Status</label>
             <select id="add-user-status" class="form-control">
-              <option value="Active">Active</option>
+              <option value="Active" selected>Active</option>
               <option value="Inactive">Inactive</option>
             </select>
           </div>
         </div>
       </div>
 
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
-      <div class="panel">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group"><label>First Name</label><input type="text" id="add-user-fname" class="form-control"></div>
-          <div class="form-group"><label>Last Name</label><input type="text" id="add-user-lname" class="form-control"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Birthday</label><input type="date" id="add-user-bday" class="form-control"></div>
-          <div class="form-group"><label>Personal Email</label><input type="email" id="add-user-pemail" class="form-control"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Phone</label><input type="text" id="add-user-phone" class="form-control"></div>
-          <div class="form-group"><label>Facebook URL</label><input type="url" id="add-user-fb" class="form-control"></div>
-        </div>
-        <div class="form-group" style="width:100%;"><label>Home Address</label><input type="text" id="add-user-addr" class="form-control"></div>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="add-user-submit">Create User Profile</button>
       </div>
-
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">Employment Details</button>
-      <div class="panel">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group"><label>Position</label><input type="text" id="add-user-pos" class="form-control"></div>
-          <div class="form-group"><label>Employment Type</label>
-            <select id="add-user-emptype" class="form-control">
-              <option value="Full-Time">Full-Time</option>
-              <option value="Part-Time">Part-Time</option>
-              <option value="Contractor">Contractor</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="add-user-hired" class="form-control"></div></div>
-      </div>
-      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;"><button type="submit" class="btn-primary" id="add-user-submit">Create User</button></div>
     </form>
-    <div id="add-user-msg" class="status-msg"></div>
+    <div id="add-user-status" class="status-msg"></div>
   </div>
 </div>
 
 <!-- Edit User Form -->
 <div id="editUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
+  
   <div class="form-wrapper">
-    <div id="edit-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span id="edt-overlay-text">Loading Data...</span></div>
-    <h2 style="margin-top:0;">Edit User Profile</h2>
-    <form id="editUserForm" onsubmit="handleEditUserSubmit(event)">
+    <div id="edit-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span id="edit-user-overlay-txt">Loading User Data...</span></div>
+    <h2 style="margin-top: 0; color: var(--brand-dark);">Edit User Profile</h2>
+    
+    <form id="editUserForm" onsubmit="handleEditUserSubmit(event)" novalidate>
       <input type="hidden" id="edt-user-rowIndex">
+      
       <button type="button" class="accordion active" onclick="toggleAccordion(this)">Basic Credentials</button>
       <div class="panel" style="display: block;">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group">
-            <label>Profile Photo</label>
-            <div style="display: flex; align-items: center; gap: 15px;">
-              <img id="edt-photo-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-square">
-              <input type="file" id="edt-photo-input" accept="image/*" onchange="previewPhoto(this, 'edt-photo-preview')">
-            </div>
-          </div>
+        <div class="form-row" style="margin-top: 15px;">
+           <div class="form-group">
+             <label>Profile Photo</label>
+             <div style="display: flex; align-items: center; gap: 15px;">
+                <img id="edt-user-photo-preview" src="" class="profile-photo-square">
+                <input type="file" id="edt-user-photo-input" accept="image/*" onchange="previewUserPhoto(this, 'edt-user-photo-preview')">
+             </div>
+           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Username</label><input type="text" id="edt-user-username" class="form-control" readonly style="background:#eee;"></div>
-          <div class="form-group"><label>Role</label>
-            <select id="edt-user-role" class="form-control">
-              <option value="Administrator">Administrator</option>
+          <div class="form-group"><label>Username *</label><input type="text" id="edt-user-username" class="form-control" required></div>
+          <div class="form-group">
+            <label>System Role *</label>
+            <select id="edt-user-role" class="form-control" required>
+              <option value="Admin">Admin</option>
               <option value="Account Manager">Account Manager</option>
               <option value="Account Support">Account Support</option>
               <option value="Sales Manager">Sales Manager</option>
@@ -230,8 +272,44 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Work Email</label><input type="email" id="edt-user-email" class="form-control"></div>
-          <div class="form-group"><label>Status</label>
+          <div class="form-group"><label>Work Email *</label><input type="email" id="edt-user-workemail" class="form-control" required></div>
+        </div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>First Name *</label><input type="text" id="edt-user-first" class="form-control" required></div>
+          <div class="form-group"><label>Last Name *</label><input type="text" id="edt-user-last" class="form-control" required></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Birthday</label><input type="date" id="edt-user-bday" class="form-control"></div>
+          <div class="form-group"><label>Personal Email</label><input type="email" id="edt-user-personalemail" class="form-control"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Phone Number</label><input type="text" id="edt-user-phone" class="form-control"></div>
+          <div class="form-group"><label>Facebook Profile URL</label><input type="url" id="edt-user-fb" class="form-control"></div>
+        </div>
+        <div class="form-group"><label>Home Address</label><input type="text" id="edt-user-address" class="form-control"></div>
+      </div>
+
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Position & Employment</button>
+      <div class="panel">
+        <div class="form-row" style="margin-top: 15px;">
+          <div class="form-group"><label>Position Title</label><input type="text" id="edt-user-position" class="form-control"></div>
+          <div class="form-group">
+            <label>Employment Type</label>
+            <select id="edt-user-employment" class="form-control">
+              <option value="Full-Time">Full-Time</option>
+              <option value="Part-Time">Part-Time</option>
+              <option value="Contract">Contract</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date Hired</label><input type="date" id="edt-user-hired" class="form-control"></div>
+          <div class="form-group">
+            <label>Status</label>
             <select id="edt-user-status" class="form-control">
               <option value="Active">Active</option>
               <option value="Inactive">Inactive</option>
@@ -240,169 +318,121 @@
         </div>
       </div>
 
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">Personal Information</button>
-      <div class="panel">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group"><label>First Name</label><input type="text" id="edt-user-fname" class="form-control"></div>
-          <div class="form-group"><label>Last Name</label><input type="text" id="edt-user-lname" class="form-control"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Birthday</label><input type="date" id="edt-user-bday" class="form-control"></div>
-          <div class="form-group"><label>Personal Email</label><input type="email" id="edt-user-pemail" class="form-control"></div>
-        </div>
-        <div class="form-row">
-          <div class="form-group"><label>Phone</label><input type="text" id="edt-user-phone" class="form-control"></div>
-          <div class="form-group"><label>Facebook URL</label><input type="url" id="edt-user-fb" class="form-control"></div>
-        </div>
-        <div class="form-group" style="width:100%;"><label>Home Address</label><input type="text" id="edt-user-addr" class="form-control"></div>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button type="submit" class="btn-primary" id="edt-user-submit">Update User Profile</button>
       </div>
-
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">Employment Details</button>
-      <div class="panel">
-        <div class="form-row" style="margin-top:15px;">
-          <div class="form-group"><label>Position</label><input type="text" id="edt-user-pos" class="form-control"></div>
-          <div class="form-group"><label>Employment Type</label>
-            <select id="edt-user-emptype" class="form-control">
-              <option value="Full-Time">Full-Time</option>
-              <option value="Part-Time">Part-Time</option>
-              <option value="Contractor">Contractor</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-row"><div class="form-group"><label>Date Hired</label><input type="date" id="edt-user-hired" class="form-control"></div></div>
-      </div>
-      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 20px;"><button type="submit" class="btn-primary" id="edt-user-submit">Update Profile</button></div>
     </form>
-    <div id="edt-user-msg" class="status-msg"></div>
+    <div id="edt-user-status" class="status-msg"></div>
   </div>
 </div>
 
-<!-- View User (Read-Only Profile) -->
+<!-- Read Only User View -->
 <div id="readOnlyUserView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('usersListView')">&#8592; Back to User List</button>
+  
   <div class="form-wrapper">
-    <!-- Modular Loading Overlay for View Page -->
     <div id="ro-user-overlay" class="user-loading-overlay"><div class="spinner-user"></div><span>Loading Profile...</span></div>
     
-    <div style="display: flex; gap: 30px; align-items: flex-start;">
-      <img id="ro-user-photo" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E" class="profile-photo-large">
-      <div style="flex: 1;">
-        <div style="display: flex; justify-content: space-between; align-items: flex-start;">
-          <h2 id="ro-user-fullname" style="margin-top: 0; margin-bottom: 5px;"></h2>
-          <button type="button" class="btn-edit" id="ro-edit-link">Edit Profile</button>
-        </div>
-        <p id="ro-user-role-pos" style="margin: 0; color: #666; font-weight: bold;"></p>
-        <div id="ro-user-status-badge" style="margin-top: 10px;"></div>
-        <hr style="margin: 20px 0; border: 0; border-top: 1px solid #eee;">
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px;">
+    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 25px; border-bottom: 2px solid #E3E3E3; padding-bottom: 20px;">
+       <div style="display: flex; gap: 25px; align-items: center;">
+          <img id="ro-user-photo" src="" class="profile-photo-large">
           <div>
-            <p><strong>Username:</strong> <span id="ro-user-username"></span></p>
-            <p><strong>Work Email:</strong> <span id="ro-user-email"></span></p>
-            <p><strong>Personal Email:</strong> <span id="ro-user-pemail"></span></p>
+            <h2 id="ro-user-fullname" style="margin:0;"></h2>
+            <p id="ro-user-subline" style="margin: 5px 0 0 0; color: #666; font-size: 15px;"></p>
+            <div id="ro-user-status-pill" style="margin-top: 10px;"></div>
+          </div>
+       </div>
+       <button id="ro-user-edit-btn" class="btn-edit" style="padding: 10px 20px;">Edit Profile</button>
+    </div>
+
+    <div class="tab-nav">
+      <button type="button" class="tab-btn active" id="btn-user-ro-overview" onclick="navigateClientTab('user-ro', 'overview')">Overview</button>
+      <button type="button" class="tab-btn" id="btn-user-ro-personal" onclick="navigateClientTab('user-ro', 'personal')">Personal Info</button>
+      <button type="button" class="tab-btn" id="btn-user-ro-employment" onclick="navigateClientTab('user-ro', 'employment')">Position & Employment</button>
+    </div>
+
+    <!-- RO TAB: Overview -->
+    <div id="user-ro-overview" class="tab-content" style="display: block;">
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 20px;">
+         <div>
+            <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Contact Details</h4>
+            <p><strong>Work Email:</strong> <span id="ro-user-workemail"></span></p>
+            <p><strong>Personal Email:</strong> <span id="ro-user-personalemail"></span></p>
             <p><strong>Phone:</strong> <span id="ro-user-phone"></span></p>
-          </div>
-          <div>
-            <p><strong>Hire Date:</strong> <span id="ro-user-hired"></span></p>
-            <p><strong>Employment Type:</strong> <span id="ro-user-emptype"></span></p>
-            <p><strong>Birthday:</strong> <span id="ro-user-bday"></span></p>
-            <p><strong>Facebook:</strong> <span id="ro-user-fb"></span></p>
-          </div>
-        </div>
-        <p style="margin-top:15px;"><strong>Home Address:</strong> <span id="ro-user-addr"></span></p>
+            <p><strong>Facebook:</strong> <a id="ro-user-fb-link" href="" target="_blank">View Profile</a></p>
+         </div>
+         <div>
+            <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Professional</h4>
+            <p><strong>Username:</strong> <span id="ro-user-username"></span></p>
+            <p><strong>System Role:</strong> <span id="ro-user-role"></span></p>
+            <p><strong>Current Position:</strong> <span id="ro-user-position"></span></p>
+         </div>
+      </div>
+    </div>
+
+    <!-- RO TAB: Personal Info -->
+    <div id="user-ro-personal" class="tab-content" style="display: none;">
+      <div style="margin-top: 20px;">
+        <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Additional Info</h4>
+        <p><strong>Birthday:</strong> <span id="ro-user-bday"></span></p>
+        <p><strong>Home Address:</strong><br><span id="ro-user-address"></span></p>
+      </div>
+    </div>
+
+    <!-- RO TAB: Employment -->
+    <div id="user-ro-employment" class="tab-content" style="display: none;">
+      <div style="margin-top: 20px;">
+        <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Employment Tracking</h4>
+        <p><strong>Employment Type:</strong> <span id="ro-user-employment"></span></p>
+        <p><strong>Date Hired:</strong> <span id="ro-user-hired"></span></p>
       </div>
     </div>
   </div>
 </div>
 
 <script>
-  /* --- UI HELPERS & IMAGE PROCESSING --- */
-  var DEFAULT_AVATAR = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 32 32' fill='%23cccccc'%3E%3Cpath d='M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z'/%3E%3C/svg%3E";
+  /* ========================================================================
+     1. GLOBAL STATE & UI PLUGINS
+     ======================================================================== */
+  var GLOBAL_USER_DATA = [];
+  var CURRENT_USER_SORT_COLUMN = 'username';
+  var CURRENT_USER_SORT_DESC = false;
+  var DEFAULT_AVATAR = "https://via.placeholder.com/150?text=User";
 
   /**
-   * Translates Drive sharing URLs into direct thumbnail links.
-   * @param {string} url - The Drive URL from the sheet.
+   * PLUGIN INIT: Injects username and role into header User Pill.
    */
-  function getDirectImgUrl(url) {
-    if (!url || !url.includes("drive.google.com")) return url || DEFAULT_AVATAR;
-    try {
-      var id = url.match(/[-\w]{25,}/);
-      if (id) return "https://drive.google.com/thumbnail?id=" + id[0] + "&sz=w500";
-    } catch (e) { return url || DEFAULT_AVATAR; }
-    return url || DEFAULT_AVATAR;
-  }
+  function initUserBarPlugin() {
+    if (INSTALLED_PLUGINS.includes('UserBar')) {
+      var nameEl = document.getElementById('display-username');
+      if (nameEl) nameEl.innerText = CURRENT_USERNAME;
+      
+      var popName = document.getElementById('user-popup-name');
+      if (popName) popName.innerText = CURRENT_USERNAME;
+      
+      var popRole = document.getElementById('user-popup-role');
+      if (popRole) popRole.innerText = CURRENT_USER_ROLE;
 
-  /** * Downscales bitmap images to ensure payloads fit server request limits.
-   */
-  function compressImage(base64Str, callback) {
-    var img = new Image();
-    img.src = base64Str;
-    img.onload = function() {
-      var canvas = document.createElement('canvas');
-      var width = img.width; var height = img.height;
-      var max = 500; 
-      if (width > height) { if (width > max) { height *= max / width; width = max; } } 
-      else { if (height > max) { width *= max / height; height = max; } }
-      canvas.width = width; canvas.height = height;
-      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
-      callback(canvas.toDataURL('image/jpeg', 0.7)); 
-    };
-  }
-
-  function toggleAccordion(element) {
-    element.classList.toggle("active");
-    var panel = element.nextElementSibling;
-    panel.style.display = (panel.style.display === "block") ? "none" : "block";
-  }
-
-  /**
-   * Resets form accordions to standard view (first open, others closed).
-   */
-  function resetAccordions(viewId) {
-    var view = document.getElementById(viewId);
-    if (!view) return;
-    var accordions = view.querySelectorAll('.accordion');
-    var panels = view.querySelectorAll('.panel');
-    for (var i = 0; i < accordions.length; i++) {
-      if (i === 0) { accordions[i].classList.add('active'); panels[i].style.display = 'block'; } 
-      else { accordions[i].classList.remove('active'); panels[i].style.display = 'none'; }
+      // Automatically fetch the photo for the logged-in user's popup
+      google.script.run.withSuccessHandler(function(users) {
+        var me = users.find(u => u.username === CURRENT_USERNAME);
+        if (me && me.profilePhotoUrl) {
+          var popPhoto = document.getElementById('user-popup-photo');
+          if (popPhoto) popPhoto.src = me.profilePhotoUrl;
+        }
+      }).getUsersList();
     }
-  }
-
-  function safelyFormatDate(dateStr) {
-    if (!dateStr) return "";
-    try {
-      var d = new Date(dateStr);
-      if (isNaN(d.getTime())) return "";
-      return d.toISOString().split('T')[0];
-    } catch(e) { return ""; }
-  }
-
-  function previewPhoto(input, previewId) {
-    if (input.files && input.files[0]) {
-      var reader = new FileReader();
-      reader.onload = function(e) { document.getElementById(previewId).src = e.target.result; };
-      reader.readAsDataURL(input.files[0]);
-    }
-  }
-
-  function toggleUserOverlay(id, show, text) {
-    var overlay = document.getElementById(id);
-    if (!overlay) return;
-    overlay.style.display = show ? 'flex' : 'none';
-    if (text) { var txtEl = overlay.querySelector('span'); if (txtEl) txtEl.innerText = text; }
   }
 
   /* ========================================================================
-     2. DATA FETCHING, SORTING & FILTERING
-     ======================================================================== 
-  */
-  var GLOBAL_USER_DATA = [];
-  var CURRENT_USER_SORT_COLUMN = 'username'; 
-  var CURRENT_USER_SORT_DESC = false; 
+     2. DIRECTORY: FETCHING, FILTERING & SORTING
+     ======================================================================== */
 
-  function populateUsersTable(users) {
-    GLOBAL_USER_DATA = users || [];
-    applyUserFilters();
+  function loadUsersTable() {
+    google.script.run.withSuccessHandler(function(users) {
+      GLOBAL_USER_DATA = users || [];
+      applyUserFilters();
+    }).getUsersList();
   }
 
   function handleUserSort(column) {
@@ -410,60 +440,40 @@
       CURRENT_USER_SORT_DESC = !CURRENT_USER_SORT_DESC;
     } else {
       CURRENT_USER_SORT_COLUMN = column;
-      CURRENT_USER_SORT_DESC = false; 
+      CURRENT_USER_SORT_DESC = false;
     }
     applyUserFilters();
   }
 
-  /** Resets User Filters to Default state */
   function resetUserFilters() {
-    var searchEl = document.getElementById('user-filter-search');
-    if (searchEl) searchEl.value = '';
-    
-    var cbs = document.querySelectorAll('.user-filter-status-cb');
-    cbs.forEach(function(cb) {
-      cb.checked = (cb.value === 'Active');
-    });
-    
+    document.getElementById('user-filter-search').value = '';
+    document.querySelectorAll('.user-filter-status-cb').forEach(cb => cb.checked = (cb.value === 'Active'));
+    document.querySelectorAll('.user-filter-role-cb').forEach(cb => cb.checked = true);
     applyUserFilters();
   }
 
   function applyUserFilters() {
-    var searchEl = document.getElementById('user-filter-search');
-    var search = searchEl ? searchEl.value.toLowerCase() : "";
-    var checkedStatus = Array.from(document.querySelectorAll('.user-filter-status-cb:checked')).map(cb => cb.value);
-    
+    var search = document.getElementById('user-filter-search').value.toLowerCase();
+    var checkedStatuses = Array.from(document.querySelectorAll('.user-filter-status-cb:checked')).map(cb => cb.value);
+    var checkedRoles = Array.from(document.querySelectorAll('.user-filter-role-cb:checked')).map(cb => cb.value);
+
     var filtered = GLOBAL_USER_DATA.filter(function(u) {
-      var fullname = ((u.firstName || "") + " " + (u.lastName || "")).toLowerCase();
-      var matchSearch = u.username.toLowerCase().includes(search) || fullname.includes(search) || u.workEmail.toLowerCase().includes(search);
-      var matchStatus = checkedStatus.length === 0 || checkedStatus.includes(u.status);
-      return matchSearch && matchStatus;
+      var name = (u.firstName + " " + u.lastName).toLowerCase();
+      var matchesSearch = u.username.toLowerCase().includes(search) || name.includes(search) || u.workEmail.toLowerCase().includes(search);
+      var matchesStatus = checkedStatuses.length === 0 || checkedStatuses.includes(u.status);
+      var matchesRole = checkedRoles.length === 0 || checkedRoles.includes(u.role);
+      return matchesSearch && matchesStatus && matchesRole;
     });
 
-    // Handle Sorting
     filtered.sort(function(a, b) {
-      var valA = a[CURRENT_USER_SORT_COLUMN] || '';
-      var valB = b[CURRENT_USER_SORT_COLUMN] || '';
-      
-      if (CURRENT_USER_SORT_COLUMN === 'fullName') {
-        valA = (a.firstName || "") + " " + (a.lastName || "");
-        valB = (b.firstName || "") + " " + (b.lastName || "");
-      }
-      
-      if (typeof valA === 'string') valA = valA.toLowerCase();
-      if (typeof valB === 'string') valB = valB.toLowerCase();
-      
+      var valA = String(a[CURRENT_USER_SORT_COLUMN] || "").toLowerCase();
+      var valB = String(b[CURRENT_USER_SORT_COLUMN] || "").toLowerCase();
       if (valA < valB) return CURRENT_USER_SORT_DESC ? 1 : -1;
       if (valA > valB) return CURRENT_USER_SORT_DESC ? -1 : 1;
       return 0;
     });
 
-    // Reset Sort Icons
-    document.querySelectorAll('.sort-icon').forEach(function(icon) { 
-      if(icon.id.startsWith('usort-')) icon.innerHTML = ''; 
-    });
-    
-    // Set Active Sort Icon
+    document.querySelectorAll('.sort-icon').forEach(icon => { if(icon.id.startsWith('usort-')) icon.innerHTML = ''; });
     var iconEl = document.getElementById('usort-' + CURRENT_USER_SORT_COLUMN);
     if (iconEl) iconEl.innerHTML = CURRENT_USER_SORT_DESC ? '▼' : '▲';
 
@@ -475,21 +485,22 @@
     if (!tbody) return;
     tbody.innerHTML = '';
     if (users.length === 0) {
-      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 20px;">No users found.</td></tr>';
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center; padding: 30px;">No users match your criteria.</td></tr>';
       return;
     }
     users.forEach(function(u) {
-      var badgeClass = (u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
       var tr = document.createElement('tr');
       tr.style.cursor = "pointer";
       tr.onclick = function(e) { if (!e.target.closest('.btn-edit')) openReadOnlyUser(u.rowIndex); };
+      
+      var badgeClass = "badge badge-" + (u.status || "").toLowerCase();
       tr.innerHTML = `
         <td><strong>${u.username}</strong></td>
         <td>${u.firstName} ${u.lastName}</td>
         <td>${u.workEmail}</td>
         <td>${u.role}</td>
-        <td>${u.position}</td>
-        <td><span class="badge ${badgeClass}">${u.status}</span></td>
+        <td>${u.position || "-"}</td>
+        <td><span class="${badgeClass}">${u.status || "-"}</span></td>
         <td><button class="btn-edit" onclick="openEditUserForm(${u.rowIndex}); event.stopPropagation();">Edit</button></td>
       `;
       tbody.appendChild(tr);
@@ -497,267 +508,214 @@
   }
 
   /* ========================================================================
-     3. FORM SUBMISSIONS (ADD & EDIT)
-     ======================================================================== 
-  */
+     3. IMAGE PROCESSING (Canvas API)
+     ======================================================================== */
+
+  function previewUserPhoto(input, imgId) {
+    if (input.files && input.files[0]) {
+      var reader = new FileReader();
+      reader.onload = function(e) { document.getElementById(imgId).src = e.target.result; };
+      reader.readAsDataURL(input.files[0]);
+    }
+  }
+
+  function compressUserPhoto(base64Str, callback) {
+    var img = new Image();
+    img.src = base64Str;
+    img.onload = function() {
+      var canvas = document.createElement('canvas');
+      var max = 600; var width = img.width; var height = img.height;
+      if (width > height) { if (width > max) { height *= max / width; width = max; } } 
+      else { if (height > max) { width *= max / height; height = max; } }
+      canvas.width = width; canvas.height = height;
+      canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+      callback(canvas.toDataURL('image/png', 0.8));
+    };
+  }
+
+  /* ========================================================================
+     4. FORM HANDLERS (ADD/EDIT/SUBMIT)
+     ======================================================================== */
+
+  function toggleUserOverlay(id, show, text) {
+    var overlay = document.getElementById(id);
+    if (!overlay) return;
+    overlay.style.display = show ? 'flex' : 'none';
+    if (text) { var txtEl = overlay.querySelector('span'); if (txtEl) txtEl.innerText = text; }
+  }
 
   function openAddUserForm() {
     resetAccordions('addUserView');
-    switchView('addUserView');
     document.getElementById('addUserForm').reset();
-    document.getElementById('add-photo-preview').src = DEFAULT_AVATAR;
-    
-    var msgEl = document.getElementById('add-user-msg');
-    if (msgEl) msgEl.innerHTML = '';
-    
+    document.getElementById('add-user-photo-preview').src = DEFAULT_AVATAR;
+    document.getElementById('add-user-status').innerHTML = '';
     toggleUserOverlay('add-user-overlay', false);
-    
-    var submitBtn = document.getElementById('add-user-submit');
-    if (submitBtn) submitBtn.disabled = false;
+    switchView('addUserView');
   }
 
-  /**
-   * High-integrity Add User submission.
-   * Checks for new photo bitmaps and compresses them before upload.
-   */
   function handleAddUserSubmit(e) {
     if(e) e.preventDefault();
+    var username = document.getElementById('add-user-username').value;
+    if (!username) return;
+
+    toggleUserOverlay('add-user-overlay', true, 'Creating Profile...');
+    var statusEl = document.getElementById('add-user-status');
     var btn = document.getElementById('add-user-submit');
     btn.disabled = true;
-    
-    toggleUserOverlay('add-user-overlay', true, 'Processing Image...');
-    
-    var msgEl = document.getElementById('add-user-msg');
-    if (msgEl) { msgEl.innerHTML = ''; }
-    
-    var photoSrc = document.getElementById('add-photo-preview').src;
-    var username = document.getElementById('add-user-username').value;
-    
-    // Only upload if base64 bitmap is present, skipping default SVG icon
-    if (photoSrc.startsWith('data:image') && photoSrc.includes(';base64,')) {
-      compressImage(photoSrc, function(compressed) {
-        google.script.run.withSuccessHandler(function(url) {
-          if (url.startsWith("Error")) {
-            toggleUserOverlay('add-user-overlay', false);
-            if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
-            btn.disabled = false;
-            return;
-          }
-          submitAddUser(url);
-        }).uploadProfilePhoto(compressed, username + "_profile.png");
-      });
-    } else {
-      submitAddUser(photoSrc);
-    }
 
-    function submitAddUser(finalPhotoUrl) {
-      toggleUserOverlay('add-user-overlay', true, 'Creating User...');
-      var obj = {
-        username: username,
-        role: document.getElementById('add-user-role').value,
-        workEmail: document.getElementById('add-user-email').value,
-        firstName: document.getElementById('add-user-fname').value,
-        lastName: document.getElementById('add-user-lname').value,
-        birthday: document.getElementById('add-user-bday').value,
-        personalEmail: document.getElementById('add-user-pemail').value,
-        phone: document.getElementById('add-user-phone').value,
-        address: document.getElementById('add-user-addr').value,
-        facebookUrl: document.getElementById('add-user-fb').value,
-        position: document.getElementById('add-user-pos').value,
-        employmentType: document.getElementById('add-user-emptype').value,
-        dateHired: document.getElementById('add-user-hired').value,
-        status: document.getElementById('add-user-status').value,
-        profilePhotoUrl: finalPhotoUrl
-      };
-      
+    var userData = {
+      username: username, role: document.getElementById('add-user-role').value,
+      workEmail: document.getElementById('add-user-workemail').value, firstName: document.getElementById('add-user-first').value,
+      lastName: document.getElementById('add-user-last').value, birthday: document.getElementById('add-user-bday').value,
+      personalEmail: document.getElementById('add-user-personalemail').value, phone: document.getElementById('add-user-phone').value,
+      facebookUrl: document.getElementById('add-user-fb').value, address: document.getElementById('add-user-address').value,
+      position: document.getElementById('add-user-position').value, employmentType: document.getElementById('add-user-employment').value,
+      dateHired: document.getElementById('add-user-hired').value, status: document.getElementById('add-user-status').value
+    };
+
+    var photoSrc = document.getElementById('add-user-photo-preview').src;
+    if (photoSrc && photoSrc.startsWith('data:image')) {
+      compressUserPhoto(photoSrc, function(compressed) {
+        google.script.run.withSuccessHandler(function(url) {
+          userData.profilePhotoUrl = url;
+          finalizeUserAdd(userData);
+        }).uploadProfilePhoto(compressed, "photo_" + username + ".png");
+      });
+    } else { finalizeUserAdd(userData); }
+
+    function finalizeUserAdd(p) {
       google.script.run.withSuccessHandler(function(res) {
         toggleUserOverlay('add-user-overlay', false);
-        if (msgEl) msgEl.innerHTML = res;
-        
+        statusEl.innerHTML = res;
         if (res.includes("Success")) {
-          if (msgEl) msgEl.style.color = "green";
-          setTimeout(() => {
-            // Fetch updated users and route to the new user's view-only profile
-            google.script.run.withSuccessHandler(function(users) {
-              populateUsersTable(users);
-              var newUser = users.find(u => u.username === obj.username);
-              if (newUser) {
-                openReadOnlyUser(newUser.rowIndex);
-              } else {
-                switchView('usersListView');
-              }
-              document.getElementById('addUserForm').reset();
-            }).getUsersList();
-          }, 1000);
-        } else {
-          if (msgEl) msgEl.style.color = "var(--brand-red)";
-          btn.disabled = false;
-        }
-      }).processNewUser(obj);
+          statusEl.style.color = "green";
+          setTimeout(() => { loadUsersTable(); switchView('usersListView'); }, 1500);
+        } else { btn.disabled = false; }
+      }).processNewUser(p);
     }
   }
 
-  /** Populates edit form with backend data and clears previous state */
   function openEditUserForm(rowIndex) {
     resetAccordions('editUserView');
     switchView('editUserView');
-    
-    // Clear previous state immediately to prevent ghosting
     document.getElementById('editUserForm').reset();
-    document.getElementById('edt-photo-preview').src = DEFAULT_AVATAR;
-    
-    var msgEl = document.getElementById('edt-user-msg');
-    if (msgEl) msgEl.innerHTML = '';
-    
-    toggleUserOverlay('edit-user-overlay', true, 'Loading Data...');
-    
-    var submitBtn = document.getElementById('edt-user-submit');
-    if (submitBtn) submitBtn.disabled = true;
-    
-    google.script.run.withSuccessHandler(function(u) {
+    document.getElementById('edt-user-status').innerHTML = '';
+    toggleUserOverlay('edit-user-overlay', true, 'Fetching Data...');
+
+    google.script.run.withSuccessHandler(function(data) {
       toggleUserOverlay('edit-user-overlay', false);
-      document.getElementById('edt-user-rowIndex').value = u.rowIndex;
-      document.getElementById('edt-user-username').value = u.username;
-      document.getElementById('edt-user-role').value = u.role;
-      document.getElementById('edt-user-email').value = u.workEmail;
-      document.getElementById('edt-user-fname').value = u.firstName;
-      document.getElementById('edt-user-lname').value = u.lastName;
-      document.getElementById('edt-user-bday').value = safelyFormatDate(u.birthday);
-      document.getElementById('edt-user-pemail').value = u.personalEmail;
-      document.getElementById('edt-user-phone').value = u.phone;
-      document.getElementById('edt-user-addr').value = u.address;
-      document.getElementById('edt-user-fb').value = u.facebookUrl;
-      document.getElementById('edt-user-pos').value = u.position;
-      document.getElementById('edt-user-emptype').value = u.employmentType || "Full-Time";
-      document.getElementById('edt-user-hired').value = safelyFormatDate(u.dateHired);
-      document.getElementById('edt-user-status').value = u.status;
-      document.getElementById('edt-photo-preview').src = getDirectImgUrl(u.profilePhotoUrl);
-      
-      if (submitBtn) submitBtn.disabled = false;
+      document.getElementById('edt-user-rowIndex').value = data.rowIndex;
+      document.getElementById('edt-user-username').value = data.username || "";
+      document.getElementById('edt-user-role').value = data.role || "Account Manager";
+      document.getElementById('edt-user-workemail').value = data.workEmail || "";
+      document.getElementById('edt-user-first').value = data.firstName || "";
+      document.getElementById('edt-user-last').value = data.lastName || "";
+      document.getElementById('edt-user-bday').value = safelyFormatDate(data.birthday);
+      document.getElementById('edt-user-personalemail').value = data.personalEmail || "";
+      document.getElementById('edt-user-phone').value = data.phone || "";
+      document.getElementById('edt-user-fb').value = data.facebookUrl || "";
+      document.getElementById('edt-user-address').value = data.address || "";
+      document.getElementById('edt-user-position').value = data.position || "";
+      document.getElementById('edt-user-employment').value = data.employmentType || "Full-Time";
+      document.getElementById('edt-user-hired').value = safelyFormatDate(data.dateHired);
+      document.getElementById('edt-user-status').value = data.status || "Active";
+      document.getElementById('edt-user-photo-preview').src = data.profilePhotoUrl || DEFAULT_AVATAR;
     }).getUserById(rowIndex);
   }
 
-  /** Submits profile updates with photo upload handling and direct profile routing */
   function handleEditUserSubmit(e) {
     if(e) e.preventDefault();
+    toggleUserOverlay('edit-user-overlay', true, 'Saving Changes...');
     var btn = document.getElementById('edt-user-submit');
     btn.disabled = true;
-    
-    toggleUserOverlay('edit-user-overlay', true, 'Processing Image...');
 
-    var msgEl = document.getElementById('edt-user-msg');
-    if (msgEl) msgEl.innerHTML = '';
+    var userData = {
+      rowIndex: document.getElementById('edt-user-rowIndex').value,
+      username: document.getElementById('edt-user-username').value,
+      role: document.getElementById('edt-user-role').value,
+      workEmail: document.getElementById('edt-user-workemail').value,
+      firstName: document.getElementById('edt-user-first').value,
+      lastName: document.getElementById('edt-user-last').value,
+      birthday: document.getElementById('edt-user-bday').value,
+      personalEmail: document.getElementById('edt-user-personalemail').value,
+      phone: document.getElementById('edt-user-phone').value,
+      facebookUrl: document.getElementById('edt-user-fb').value,
+      address: document.getElementById('edt-user-address').value,
+      position: document.getElementById('edt-user-position').value,
+      employmentType: document.getElementById('edt-user-employment').value,
+      dateHired: document.getElementById('edt-user-hired').value,
+      status: document.getElementById('edt-user-status').value,
+      profilePhotoUrl: document.getElementById('edt-user-photo-preview').src
+    };
 
-    var photoSrc = document.getElementById('edt-photo-preview').src;
-    var username = document.getElementById('edt-user-username').value;
-    var rowIndex = document.getElementById('edt-user-rowIndex').value;
-
-    // Check if new photo was selected (Base64 bitmap, not the default SVG)
-    if (photoSrc.startsWith('data:image') && photoSrc.includes(';base64,')) {
-      compressImage(photoSrc, function(compressed) {
+    var photoSrc = document.getElementById('edt-user-photo-preview').src;
+    if (photoSrc.startsWith('data:image')) {
+      compressUserPhoto(photoSrc, function(compressed) {
         google.script.run.withSuccessHandler(function(url) {
-          if (url.startsWith("Error")) {
-            toggleUserOverlay('edit-user-overlay', false);
-            if (msgEl) { msgEl.innerHTML = url; msgEl.style.color = "var(--brand-red)"; }
-            btn.disabled = false;
-            return;
-          }
-          submitEditUser(url);
-        }).uploadProfilePhoto(compressed, username + "_profile.png");
+          userData.profilePhotoUrl = url;
+          finalizeUserEdit(userData);
+        }).uploadProfilePhoto(compressed, "photo_" + userData.username + ".png");
       });
-    } else {
-      submitEditUser(photoSrc);
-    }
+    } else { finalizeUserEdit(userData); }
 
-    function submitEditUser(finalPhotoUrl) {
-      toggleUserOverlay('edit-user-overlay', true, 'Updating Record...');
-      var obj = {
-        rowIndex: rowIndex,
-        username: username,
-        role: document.getElementById('edt-user-role').value,
-        workEmail: document.getElementById('edt-user-email').value,
-        firstName: document.getElementById('edt-user-fname').value,
-        lastName: document.getElementById('edt-user-lname').value,
-        birthday: document.getElementById('edt-user-bday').value,
-        personalEmail: document.getElementById('edt-user-pemail').value,
-        phone: document.getElementById('edt-user-phone').value,
-        address: document.getElementById('edt-user-addr').value,
-        facebookUrl: document.getElementById('edt-user-fb').value,
-        position: document.getElementById('edt-user-pos').value,
-        employmentType: document.getElementById('edt-user-emptype').value,
-        dateHired: document.getElementById('edt-user-hired').value,
-        status: document.getElementById('edt-user-status').value,
-        profilePhotoUrl: finalPhotoUrl
-      };
-      
+    function finalizeUserEdit(p) {
       google.script.run.withSuccessHandler(function(res) {
         toggleUserOverlay('edit-user-overlay', false);
-        if (msgEl) msgEl.innerHTML = res;
-        
         if (res.includes("Success")) {
-          if (msgEl) msgEl.style.color = "green";
-          setTimeout(() => {
-            // Sync changes and route to updated read-only profile
-            google.script.run.withSuccessHandler(function(users) {
-              populateUsersTable(users);
-              openReadOnlyUser(obj.rowIndex);
-            }).getUsersList();
-          }, 1000);
-        } else {
-          if (msgEl) msgEl.style.color = "var(--brand-red)";
-          btn.disabled = false;
-        }
-      }).updateUserRecord(obj);
+          loadUsersTable(); openReadOnlyUser(p.rowIndex);
+        } else { btn.disabled = false; }
+      }).updateUserRecord(p);
     }
   }
 
   /* ========================================================================
-     4. READ ONLY VIEW logic
-     ======================================================================== 
-  */
+     5. VIEW PROFILE (READ-ONLY)
+     ======================================================================== */
 
-  /** Populates read-only user view with loading overlay and clears ghost text */
   function openReadOnlyUser(rowIndex) {
     switchView('readOnlyUserView');
-    
-    // Clear view immediately while loading to ensure no ghost data
+    // Clear instantly to prevent ghosting
+    document.getElementById('ro-user-fullname').innerText = "";
     document.getElementById('ro-user-photo').src = DEFAULT_AVATAR;
-    document.getElementById('ro-user-fullname').innerText = ''; 
-    document.getElementById('ro-user-role-pos').innerText = '';
-    document.getElementById('ro-user-status-badge').innerHTML = '';
-    
-    // Detailed grid items clearing
-    document.getElementById('ro-user-username').innerText = '';
-    document.getElementById('ro-user-email').innerText = '';
-    document.getElementById('ro-user-pemail').innerText = '';
-    document.getElementById('ro-user-phone').innerText = '';
-    document.getElementById('ro-user-hired').innerText = '';
-    document.getElementById('ro-user-emptype').innerText = '';
-    document.getElementById('ro-user-bday').innerText = '';
-    document.getElementById('ro-user-fb').innerText = '';
-    document.getElementById('ro-user-addr').innerText = '';
+    document.getElementById('ro-user-workemail').innerText = "";
     
     toggleUserOverlay('ro-user-overlay', true, 'Loading Profile...');
-    
-    google.script.run.withSuccessHandler(function(u) {
+    navigateClientTab('user-ro', 'overview');
+
+    google.script.run.withSuccessHandler(function(data) {
       toggleUserOverlay('ro-user-overlay', false);
+      document.getElementById('ro-user-fullname').innerText = data.firstName + " " + data.lastName;
+      document.getElementById('ro-user-subline').innerText = (data.position || "Staff") + " • " + (data.role || "Member");
+      document.getElementById('ro-user-photo').src = data.profilePhotoUrl || DEFAULT_AVATAR;
       
-      document.getElementById('ro-user-photo').src = getDirectImgUrl(u.profilePhotoUrl);
-      document.getElementById('ro-user-fullname').innerText = (u.firstName || "") + " " + (u.lastName || "");
-      document.getElementById('ro-user-role-pos').innerText = u.role + " | " + u.position;
-      document.getElementById('ro-user-username').innerText = u.username;
-      document.getElementById('ro-user-email').innerText = u.workEmail;
-      document.getElementById('ro-user-pemail').innerText = u.personalEmail || "N/A";
-      document.getElementById('ro-user-phone').innerText = u.phone || "N/A";
-      document.getElementById('ro-user-hired').innerText = u.dateHired || "N/A";
-      document.getElementById('ro-user-emptype').innerText = u.employmentType || "N/A";
-      document.getElementById('ro-user-bday').innerText = u.birthday || "N/A";
-      document.getElementById('ro-user-fb').innerText = u.facebookUrl || "N/A";
-      document.getElementById('ro-user-addr').innerText = u.address || "N/A";
+      var statusBox = document.getElementById('ro-user-status-pill');
+      var sClass = data.status === 'Active' ? 'badge-active' : 'badge-inactive';
+      statusBox.innerHTML = `<span class="badge ${sClass}">${data.status}</span>`;
+
+      document.getElementById('ro-user-username').innerText = data.username;
+      document.getElementById('ro-user-role').innerText = data.role;
+      document.getElementById('ro-user-workemail').innerText = data.workEmail;
+      document.getElementById('ro-user-personalemail').innerText = data.personalEmail || "N/A";
+      document.getElementById('ro-user-phone').innerText = data.phone || "N/A";
+      document.getElementById('ro-user-position').innerText = data.position || "N/A";
+      document.getElementById('ro-user-bday').innerText = safelyFormatDate(data.birthday) || "N/A";
+      document.getElementById('ro-user-address').innerText = data.address || "No address on file.";
+      document.getElementById('ro-user-employment').innerText = data.employmentType || "N/A";
+      document.getElementById('ro-user-hired').innerText = safelyFormatDate(data.dateHired) || "N/A";
       
-      var badgeClass = (u.status && u.status.toLowerCase() === 'active') ? 'badge-active' : 'badge-inactive';
-      document.getElementById('ro-user-status-badge').innerHTML = `<span class="badge ${badgeClass}">${u.status || 'Active'}</span>`;
-      document.getElementById('ro-edit-link').onclick = () => openEditUserForm(u.rowIndex);
+      var fb = document.getElementById('ro-user-fb-link');
+      if (data.facebookUrl) { fb.href = data.facebookUrl; fb.style.display = 'inline'; } 
+      else { fb.style.display = 'none'; }
+
+      document.getElementById('ro-user-edit-btn').onclick = function() { openEditUserForm(data.rowIndex); };
     }).getUserById(rowIndex);
   }
+  
+  function handleSignOut() {
+    // Purge the local session cache
+    localStorage.removeItem('sparkhub_session');
+    // Redirect to Google's logout (covers both SSO and Local bases safely)
+    window.top.location.href = 'https://accounts.google.com/Logout';
+  }
 </script>
+<!-- [SPARKHUB INTEGRITY ANCHOR: END] -->

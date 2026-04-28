@@ -1,0 +1,80 @@
+<!-- 
+  [SPARKHUB INTEGRITY HEADER: START]
+  FILE: NotificationsData.html
+  VERSION: 1.1 (Modular Plugin Integration)
+-->
+<!-- UI: List View Container -->
+<div id="notificationsListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  <h2>All Notifications</h2>
+  <div class="table-container">
+    <table>
+      <thead><tr><th>Date</th><th>Module</th><th>Event</th><th>Message</th></tr></thead>
+      <tbody id="notif-table-body"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- UI: Popup Container (Injected into Header via Index.html call) -->
+<div id="notif-popup" class="header-popup" style="display:none;">
+  <p style="font-size: 12px; color: #888;">Loading notifications...</p>
+</div>
+
+<script>
+  /**
+   * PLUGIN INIT: Triggered by Index.html on DOM ready.
+   */
+  function initNotificationsPlugin() {
+    if (INSTALLED_PLUGINS.includes('NotifBell')) {
+      fetchNotifications();
+    }
+  }
+
+  function loadNotificationsTable() {
+    google.script.run.withSuccessHandler(function(notifs) {
+      var body = document.getElementById('notif-table-body');
+      body.innerHTML = '';
+      notifs.forEach(n => {
+        var tr = document.createElement('tr');
+        tr.innerHTML = `<td>${n.time}</td><td>${n.module}</td><td>${n.event}</td><td>${n.message}</td>`;
+        body.appendChild(tr);
+      });
+    }).getMyNotifications(50, false);
+  }
+
+  function fetchNotifications() {
+    google.script.run.withSuccessHandler(function(notifs) {
+      var unreadCount = 0;
+      var html = '<h4 style="margin:0 0 10px 0;">Notifications</h4><div id="notif-scroll-box" style="max-height:250px; overflow-y:auto;">';
+      if (!notifs || notifs.length === 0) { html += '<p style="font-size:12px; color:#888;">No new messages.</p>'; } else {
+        notifs.forEach(n => {
+          if (!n.isRead) unreadCount++;
+          html += `<div class="notif-item ${n.isRead ? '' : 'notif-unread'}" data-row="${n.row}" style="padding:10px; border-bottom:1px solid #eee;">
+            <div style="font-size:13px; color:#333;">${n.message}</div>
+            <div style="font-size:11px; color:#999; margin-top:4px;">${n.time}</div>
+          </div>`;
+        });
+      }
+      html += '</div><button onclick="switchView(\'notificationsListView\')" style="width:100%; padding:10px; background:none; border:none; color:var(--brand-primary); cursor:pointer; font-weight:bold;">View All</button>';
+      var popup = document.getElementById('notif-popup');
+      if (popup) { popup.innerHTML = html; setupNotificationObserver(); }
+      var badge = document.getElementById('notif-badge'); if (badge) { badge.innerText = unreadCount; badge.style.display = unreadCount > 0 ? 'block' : 'none'; }
+    }).getMyNotifications(10, true);
+  }
+
+  function setupNotificationObserver() {
+    var unreadItems = document.querySelectorAll('.notif-unread'); if (unreadItems.length === 0) return;
+    var observer = new IntersectionObserver(function(entries, obs) {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          var el = entry.target; google.script.run.markNotificationAsRead(el.getAttribute('data-row'));
+          el.classList.remove('notif-unread'); obs.unobserve(el);
+          var badge = document.getElementById('notif-badge');
+          if (badge) { var count = parseInt(badge.innerText) - 1; badge.innerText = count; if (count <= 0) badge.style.display = 'none'; }
+        }
+      });
+    }, { root: document.getElementById('notif-scroll-box'), threshold: 0.5 });
+    unreadItems.forEach(item => observer.observe(item));
+  }
+</script>
+<!-- [SPARKHUB INTEGRITY ANCHOR: END] -->

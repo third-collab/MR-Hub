@@ -1,22 +1,17 @@
 /**
  * Users Module - Backend
- * Standardized under MR Hub Architecture Blueprint.
- * Handles: Staff profiles, role assignments, and directory management.
+ * Standardized under SparkHub Architecture Blueprint.
+ * Handles: Staff profiles, permissions, RBAC, and directory management.
  */
 
 /**
  * Processes and saves a new user record in the 'Users' sheet.
- * Standardizes the 16-column structure and logs a system notification.
  * @param {Object} obj - The user data object from the Add User form.
  * @return {string} Success confirmation message.
  */
 function processNewUser(obj) {
   try {
     var sheet = getMainDb().getSheetByName("Users");
-    
-    // Structure: Timestamp, Username, Role, Work Email, First Name, Last Name, 
-    // Birthday, Personal Email, Phone, Address, Facebook, Photo, Position, 
-    // Emp Type, Date Hired, Status
     sheet.appendRow([
       new Date(), 
       obj.username, 
@@ -35,29 +30,20 @@ function processNewUser(obj) {
       obj.dateHired, 
       obj.status 
     ]);
-
-    // Blueprint Integration: Mandatory logNotification call for team awareness
-    logNotification("Users", "New User", "New Team Member Joined: " + obj.username, "All", "");
-    
+    logNotification("Users", "New User", "Team Member Joined: " + obj.username, "All", "");
     return "Success! User created.";
-  } catch (e) {
-    return "Error: " + e.message;
-  }
+  } catch (e) { return "Error: " + e.message; }
 }
 
 /**
  * Updates an existing user record in the spreadsheet.
- * Overwrites columns B through P based on the provided rowIndex.
  * @param {Object} obj - Data object including the spreadsheet rowIndex.
  * @return {string} Success confirmation message.
  */
 function updateUserRecord(obj) {
   try {
     var sheet = getMainDb().getSheetByName("Users");
-    // rowIndex is 1-based from the frontend, but sheet indices are 1-based. 
-    // If rowIndex represents the data array index, we adjust for header.
     var row = parseInt(obj.rowIndex);
-    
     sheet.getRange(row, 2, 1, 15).setValues([[
       obj.username, 
       obj.role, 
@@ -76,9 +62,7 @@ function updateUserRecord(obj) {
       obj.status
     ]]);
     return "Success! User updated.";
-  } catch (e) {
-    return "Error: " + e.message;
-  }
+  } catch (e) { return "Error: " + e.message; }
 }
 
 /**
@@ -90,79 +74,91 @@ function getUserById(rowIndex) {
   try {
     var sheet = getMainDb().getSheetByName("Users");
     var rowData = sheet.getRange(rowIndex, 1, 1, 16).getDisplayValues()[0];
-    
     return {
-      rowIndex: rowIndex, 
-      username: rowData[1], 
-      role: rowData[2], 
-      workEmail: rowData[3],
-      firstName: rowData[4], 
-      lastName: rowData[5], 
-      birthday: rowData[6], 
-      personalEmail: rowData[7], 
-      phone: rowData[8], 
-      address: rowData[9], 
-      facebookUrl: rowData[10], 
-      profilePhotoUrl: rowData[11],
-      position: rowData[12], 
-      employmentType: rowData[13], 
-      dateHired: rowData[14], 
-      status: rowData[15]
+      rowIndex: rowIndex, username: rowData[1], role: rowData[2], workEmail: rowData[3],
+      firstName: rowData[4], lastName: rowData[5], birthday: rowData[6], personalEmail: rowData[7],
+      phone: rowData[8], address: rowData[9], facebookUrl: rowData[10], profilePhotoUrl: rowData[11],
+      position: rowData[12], employmentType: rowData[13], dateHired: rowData[14], status: rowData[15]
     };
-  } catch (e) { 
-    return { error: e.message }; 
-  }
+  } catch (e) { return { error: e.message }; }
 }
 
 /** * Fetches a summarized list of all users for the management table.
- * @return {Array<Object>} Array of user summaries.
  */
 function getUsersList() {
   try {
     var sheet = getMainDb().getSheetByName("Users");
     var data = sheet.getDataRange().getValues();
-    // Remove header row
     data.shift(); 
-    
     return data.map(function(row, i) {
       return { 
-        rowIndex: i + 2, // Header is row 1, so index 0 is row 2
-        username: row[1], 
-        role: row[2], 
-        workEmail: row[3], 
-        firstName: row[4], 
-        lastName: row[5], 
-        position: row[12], 
-        status: row[15] 
+        rowIndex: i + 2, 
+        username: row[1], role: row[2], workEmail: row[3], 
+        firstName: row[4], lastName: row[5], position: row[12], status: row[15] 
       };
     });
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 }
 
-/** * Fetches a list of usernames for users whose position is 'Account Manager' and status is 'Active'.
- * Used to populate dropdown menus across the system.
- * @return {Array<string>} List of active Account Manager usernames.
+/* ========================================================================
+   ROLE-BASED ACCESS CONTROL (RBAC) INTENTS
+   ======================================================================== */
+
+/**
+ * Retrieves the role of the currently logged-in user from the Users sheet.
+ * Defaults to 'Inactive' if the user is not found.
+ */
+function getUserRole() {
+  try {
+    var email = Session.getActiveUser().getEmail();
+    var sheet = getMainDb().getSheetByName("Users");
+    var data = sheet.getDataRange().getValues();
+    
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][3] === email) { // Work Email column (D)
+        return data[i][15] === 'Inactive' ? 'Inactive' : data[i][2]; // Status (P) and Role (C)
+      }
+    }
+    
+    // Admin Failsafe: Check project settings for primary admin
+    if (email === PropertiesService.getScriptProperties().getProperty('ADMIN_EMAIL')) {
+      return "Administrator";
+    }
+    
+    return "Inactive";
+  } catch (e) { return "Inactive"; }
+}
+
+/**
+ * Fetches the specific Username for the UI greeting.
+ */
+function getLoggedInUsername() {
+  try {
+    var email = Session.getActiveUser().getEmail();
+    var sheet = getMainDb().getSheetByName("Users");
+    var data = sheet.getDataRange().getValues();
+    for (var i = 1; i < data.length; i++) {
+      if (data[i][3] === email) return data[i][1];
+    }
+    return email.split('@')[0];
+  } catch (e) { return "User"; }
+}
+
+/**
+ * Compiles a list of usernames for all active Account Managers.
  */
 function getAccountManagers() {
   try {
     var sheet = getMainDb().getSheetByName("Users");
-    if (!sheet) return [];
-    
     var data = sheet.getDataRange().getValues();
     var managers = [];
-    
     for (var i = 1; i < data.length; i++) {
-      var pos = data[i][12] ? data[i][12].toString().trim() : "";
-      var stat = data[i][15] ? data[i][15].toString().trim() : "";
-      
-      if (pos === 'Account Manager' && stat === 'Active') {
-        managers.push(data[i][1].toString().trim());
+      var role = data[i][2];
+      var status = data[i][15];
+      if (status === 'Active' && (role === 'Account Manager' || role === 'Administrator' || role === 'Admin')) {
+        managers.push(data[i][1]);
       }
     }
     return managers;
-  } catch (e) {
-    return [];
-  }
+  } catch (e) { return []; }
 }

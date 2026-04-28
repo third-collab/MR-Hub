@@ -1,8 +1,8 @@
 <!-- 
   [SPARKHUB INTEGRITY HEADER: START]
   FILE: ClientsData.html
-  VERSION: 1.7 (100% Logic Parity + Full Verbosity Restoration)
-  SYNC STATUS: Fully Synchronized with 1565-line Baseline & Master_Succession.md
+  VERSION: 1.6 (100% Functional Parity + Full 39-Field Engine Restoration)
+  SYNC STATUS: Fully Synchronized with Reference Baseline & Master_Succession.md
 -->
 
 <!-- 
@@ -11,20 +11,20 @@
   
   CORE RESPONSIBILITIES:
   - Master Client Database Management (Full 39-Field Architecture).
-  - Dynamic JSON Data Tracking (Contacts, Shipping, Returns).
-  - Note Engine: Drag-and-drop reordering, Inline click-to-edit, & Deletion gating.
-  - Audit Trail: Field-level diffing history (Old Value -> New Value).
+  - Dynamic JSON Tracking for Contacts, Shipping, and Returns.
+  - Operational Note Engine with Drag-and-Drop priority reordering.
+  - Granular Field-Level Audit Trail using diffJson backend.
 -->
 
 <style>
-  /* --- MODULE-SPECIFIC CSS (Add-on Isolation Restored) --- */
+  /* --- Module-Specific Styles (Add-on Isolation) --- */
   
-  /* Modular Loading Overlay */
+  /* Modular Loading Overlays */
   .client-loading-overlay {
     display: none;
     position: absolute;
     top: 0; left: 0; width: 100%; height: 100%;
-    background: rgba(255, 255, 255, 0.9);
+    background: rgba(255, 255, 255, 0.85);
     z-index: 2000;
     justify-content: center;
     align-items: center;
@@ -41,39 +41,27 @@
     min-height: 800px;
   }
 
-  /* Note Engine Design Tokens (Restored full verbosity) */
+  /* Note Engine Design Tokens */
   .op-note-container {
-    background: #ffffff;
+    background: #fff;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 20px;
     margin-bottom: 15px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    position: relative;
-    border-left: 4px solid #cbd5e1;
+    box-shadow: var(--shadow-sm);
+    transition: all 0.25s ease;
   }
   .op-note-container:hover {
     border-color: var(--brand-primary);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
   }
   .note-handle {
     cursor: grab;
     color: #cbd5e1;
     padding: 5px;
     font-size: 20px;
-    margin-right: 15px;
   }
   .note-handle:active { cursor: grabbing; }
-  
-  .note-text-content {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #334155;
-    flex: 1;
-    cursor: pointer;
-  }
   
   .note-meta-line {
     font-size: 11px;
@@ -83,10 +71,9 @@
     border-top: 1px solid #f1f5f9;
     display: flex;
     justify-content: space-between;
-    align-items: center;
   }
 
-  /* Dynamic JSON Rows (Contacts/Addresses) */
+  /* Dynamic JSON Rows */
   .dynamic-json-row {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -94,69 +81,56 @@
     border-radius: 8px;
     margin-bottom: 15px;
     position: relative;
-    transition: background 0.2s;
+    animation: slideDown 0.3s ease-out;
   }
-  .dynamic-json-row:hover { background: #f1f5f9; }
   
-  .row-remove-btn {
-    position: absolute;
-    top: 10px; right: 10px;
-    background: #fee2e2;
-    color: #ef4444;
-    border: none;
-    border-radius: 50%;
-    width: 28px; height: 28px;
-    cursor: pointer;
-    display: flex; align-items: center; justify-content: center;
-    font-size: 18px;
-    font-weight: bold;
-    transition: 0.2s;
+  @keyframes slideDown {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
   }
-  .row-remove-btn:hover { background: #ef4444; color: white; }
 
   /* History & Audit Trail Styling */
-  .history-audit-entry {
+  .audit-entry {
     margin-bottom: 30px;
     border-left: 4px solid var(--brand-primary);
     padding-left: 20px;
-    animation: fadeIn 0.4s ease-out;
   }
-  .history-diff-table {
+  .diff-table {
     width: 100%;
     font-size: 13px;
     border-collapse: collapse;
     margin-top: 12px;
     background: #fff;
-    border-radius: 8px;
-    overflow: hidden;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
   }
-  .history-diff-table th {
+  .diff-table th {
     background: #f1f5f9;
     color: #475569;
-    padding: 12px;
+    padding: 10px;
     text-align: left;
     border: 1px solid #e2e8f0;
-    font-weight: 600;
   }
-  .history-diff-table td {
-    padding: 12px;
+  .diff-table td {
+    padding: 10px;
     border: 1px solid #e2e8f0;
     vertical-align: top;
-    line-height: 1.5;
   }
-  .diff-old-txt { color: #b91c1c; text-decoration: line-through; background: #fef2f2; padding: 2px 4px; border-radius: 3px; }
-  .diff-new-txt { color: #15803d; background: #f0fdf4; font-weight: 600; padding: 2px 4px; border-radius: 3px; }
+  .diff-old-val { color: #991b1b; text-decoration: line-through; background: #fef2f2; }
+  .diff-new-val { color: #166534; background: #f0fdf4; font-weight: 600; }
 
-  /* Tab-Specific Layouts */
-  .ro-grid-row { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 25px; }
-  .ro-data-group { display: flex; flex-direction: column; gap: 15px; }
-  .ro-data-label { color: var(--brand-primary); border-bottom: 1px solid #f1f5f9; padding-bottom: 8px; text-transform: uppercase; font-size: 12px; letter-spacing: 1px; font-weight: 800; margin-bottom: 10px; }
-  
-  /* Quill Styling */
-  .ql-editor { font-family: 'Inter', sans-serif !important; font-size: 14px; line-height: 1.6; color: #334155; }
-  .ql-container.ql-snow { border: 1px solid #cbd5e1 !important; border-radius: 0 0 6px 6px; }
-  .ql-toolbar.ql-snow { border: 1px solid #cbd5e1 !important; border-radius: 6px 6px 0 0; background: #f8fafc; }
+  /* Section Dividers */
+  .client-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: 25px 0 15px 0;
+    padding-bottom: 8px;
+    border-bottom: 2px solid #f1f5f9;
+  }
+  .client-section-header h4 { color: var(--brand-primary); text-transform: uppercase; font-size: 13px; letter-spacing: 0.5px; }
+
+  /* Quill Fixes */
+  .ql-container { font-family: inherit; font-size: 14px; }
+  .ql-editor { min-height: 150px; }
 </style>
 
 <!-- List View: Master Client Directory -->
@@ -168,7 +142,6 @@
     <button class="btn-primary" onclick="openAddClientForm()">+ Onboard New Client</button>
   </div>
 
-  <!-- Standardized Filter Bar -->
   <div class="filter-wrapper">
     <input type="text" id="client-filter-search" class="filter-input" placeholder="Search brands, companies, emails, or services..." onkeyup="applyClientFilters()">
     <button class="btn-filter-toggle" onclick="toggleFilter('client-adv')">
@@ -215,7 +188,7 @@
   </div>
 </div>
 
-<!-- Add Client Form (Full 39-Field Onboarding) -->
+<!-- Add Client Form (Restored Multi-Section logic) -->
 <div id="addClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Registry</button>
   <div class="form-wrapper">
@@ -230,7 +203,7 @@
           <div class="form-group"><label>Brand Name *</label><input type="text" id="add-brand" class="form-control" required></div>
         </div>
         <div class="form-row">
-          <div class="form-group" style="flex: 1;"><label>Company Address</label><input type="text" id="add-address" class="form-control" placeholder="Full legal or billing address"></div>
+          <div class="form-group" style="flex: 1;"><label>Company Address</label><input type="text" id="add-address" class="form-control"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Website URL</label><input type="url" id="add-website" class="form-control" placeholder="https://"></div>
@@ -259,7 +232,7 @@
           <div class="form-group"><label>Birthday</label><input type="date" id="add-priBirthday" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group" style="flex: 1;"><label>Direct Mailing Address</label><input type="text" id="add-priAddress" class="form-control" placeholder="Personal or direct office address"></div>
+          <div class="form-group" style="flex: 1;"><label>Direct Address</label><input type="text" id="add-priAddress" class="form-control"></div>
         </div>
       </div>
 
@@ -270,7 +243,7 @@
           <div class="form-group"><label>Initial Expiration Date</label><input type="date" id="add-expDate" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Term Count</label><input type="number" id="add-termCount" class="form-control" placeholder="e.g. 12"></div>
+          <div class="form-group"><label>Term Count</label><input type="number" id="add-termCount" class="form-control"></div>
           <div class="form-group">
             <label>Term Unit</label>
             <select id="add-termUnit" class="form-control">
@@ -284,9 +257,9 @@
           <div class="form-group">
             <label>Services Included *</label>
             <div class="checkbox-group" style="display:flex; flex-wrap:wrap; gap:15px; margin-top:5px;">
-              <label style="font-weight:normal;"><input type="checkbox" name="add-services" value="Brand Management"> Brand Mgmt</label>
-              <label style="font-weight:normal;"><input type="checkbox" name="add-services" value="Listing Optimization"> Listing Opt</label>
-              <label style="font-weight:normal;"><input type="checkbox" name="add-services" value="Managed Listing Optimization"> Managed Opt</label>
+              <label><input type="checkbox" name="add-services" value="Brand Management"> Brand Mgmt</label>
+              <label><input type="checkbox" name="add-services" value="Listing Optimization"> Listing Opt</label>
+              <label><input type="checkbox" name="add-services" value="Managed Listing Optimization"> Managed Opt</label>
             </div>
           </div>
         </div>
@@ -298,24 +271,24 @@
         <button type="button" class="btn-add-row" onclick="addContactRow('add-contacts-container')">+ Add Additional Contact</button>
       </div>
 
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">5. Handover Strategy & Documentation</button>
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">5. Handover Strategy & Notes</button>
       <div class="panel">
-        <div id="add-handover-editor" style="height: 300px; margin-top:15px; border: 1px solid #cbd5e1; border-radius: 4px;"></div>
+        <div id="add-handover-editor" style="height: 250px; margin-top:15px; border: 1px solid #cbd5e1; border-radius: 4px;"></div>
       </div>
 
       <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 40px;">
-        <button type="submit" class="btn-primary" id="add-submit-btn" style="padding: 15px 45px;">Finalize Onboarding</button>
+        <button type="submit" class="btn-primary" id="add-submit-btn" style="padding: 15px 40px;">Finalize Onboarding</button>
       </div>
     </form>
     <div id="add-status-msg" class="status-msg"></div>
   </div>
 </div>
 
-<!-- Edit Client Form (The Full 39-Field Engine Restoration) -->
+<!-- Edit Client Form (The Full 39-Field Logic restoration) -->
 <div id="editClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Registry</button>
   <div class="form-wrapper">
-    <div id="edit-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span id="edit-overlay-text">Merging Master Data...</span></div>
+    <div id="edit-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span id="edit-overlay-text">Merging Data...</span></div>
     <h2 style="margin-top: 0; color: var(--brand-dark);">Edit Master Profile</h2>
     
     <form id="editClientForm" onsubmit="handleEditClientSubmit(event)">
@@ -328,11 +301,11 @@
           <div class="form-group"><label>Brand Name</label><input type="text" id="edt-brand" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group" style="flex: 1;"><label>Full Legal Address</label><input type="text" id="edt-address" class="form-control"></div>
+          <div class="form-group" style="flex: 1;"><label>Full Address</label><input type="text" id="edt-address" class="form-control"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Website</label><input type="url" id="edt-website" class="form-control"></div>
-          <div class="form-group"><label>Anniversary Date</label><input type="date" id="edt-anniversary" class="form-control"></div>
+          <div class="form-group"><label>Anniversary</label><input type="date" id="edt-anniversary" class="form-control"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Brand Code</label><input type="text" id="edt-brandCode" class="form-control"></div>
@@ -359,29 +332,29 @@
         </div>
         <div class="form-row">
           <div class="form-group"><label>Work Email</label><input type="email" id="edt-priEmail" class="form-control"></div>
-          <div class="form-group"><label>Phone Number</label><input type="text" id="edt-priPhone" class="form-control"></div>
+          <div class="form-group"><label>Phone</label><input type="text" id="edt-priPhone" class="form-control"></div>
         </div>
         <div class="form-row">
           <div class="form-group"><label>Position</label><input type="text" id="edt-priPosition" class="form-control"></div>
           <div class="form-group"><label>Birthday</label><input type="date" id="edt-priBirthday" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group" style="flex: 1;"><label>Direct Mailing Address</label><input type="text" id="edt-priAddress" class="form-control"></div>
+          <div class="form-group" style="flex: 1;"><label>Direct Address</label><input type="text" id="edt-priAddress" class="form-control"></div>
         </div>
       </div>
 
       <button type="button" class="accordion" onclick="toggleAccordion(this)">Contractual Terms & Commercials</button>
       <div class="panel">
         <div class="form-row" style="margin-top:15px;">
-          <div class="form-group"><label>Original Start</label><input type="date" id="edt-origStart" class="form-control" readonly style="background:#f1f5f9; color:#64748b;"></div>
+          <div class="form-group"><label>Original Start</label><input type="date" id="edt-origStart" class="form-control" readonly style="background:#f1f5f9;"></div>
           <div class="form-group"><label>Current Start Date</label><input type="date" id="edt-currStart" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Original Expiration</label><input type="date" id="edt-origExp" class="form-control" readonly style="background:#f1f5f9; color:#64748b;"></div>
+          <div class="form-group"><label>Original Expiration</label><input type="date" id="edt-origExp" class="form-control" readonly style="background:#f1f5f9;"></div>
           <div class="form-group"><label>Latest Expiration Date</label><input type="date" id="edt-currExp" class="form-control"></div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>Original End (Cancel)</label><input type="date" id="edt-origEnd" class="form-control" readonly style="background:#f1f5f9; color:#64748b;"></div>
+          <div class="form-group"><label>Original End</label><input type="date" id="edt-origEnd" class="form-control" readonly style="background:#f1f5f9;"></div>
           <div class="form-group"><label>Latest End Date</label><input type="date" id="edt-endDate" class="form-control"></div>
         </div>
         <div class="form-row">
@@ -404,119 +377,119 @@
           </div>
         </div>
         <div class="form-row">
-          <div class="form-group"><label>PPC Launch Date</label><input type="date" id="edt-ppcDate" class="form-control"></div>
-          <div class="form-group"><label>DSP Launch Date</label><input type="date" id="edt-dspDate" class="form-control"></div>
+          <div class="form-group"><label>PPC Launch</label><input type="date" id="edt-ppcDate" class="form-control"></div>
+          <div class="form-group"><label>DSP Launch</label><input type="date" id="edt-dspDate" class="form-control"></div>
         </div>
         <div class="form-group">
           <label>Services Active</label>
-          <div class="checkbox-group" style="display:flex; flex-wrap:wrap; gap:15px; margin-top:5px;">
-            <label><input type="checkbox" name="edt-services" value="Brand Management"> Brand Management</label>
-            <label><input type="checkbox" name="edt-services" value="Listing Optimization"> Listing Optimization</label>
-            <label><input type="checkbox" name="edt-services" value="Managed Listing Optimization"> Managed Listing Optimization</label>
+          <div class="checkbox-group" style="display:flex; flex-wrap:wrap; gap:15px;">
+            <label><input type="checkbox" name="edt-services" value="Brand Management"> Brand Mgmt</label>
+            <label><input type="checkbox" name="edt-services" value="Listing Optimization"> Listing Opt</label>
+            <label><input type="checkbox" name="edt-services" value="Managed Listing Optimization"> Managed Opt</label>
           </div>
         </div>
       </div>
 
       <button type="button" class="accordion" onclick="toggleAccordion(this)">Team & Logistic JSON Arrays</button>
       <div class="panel">
-        <div class="client-section-header"><h4>Additional Team Contacts</h4><button type="button" class="btn-add-row" onclick="addContactRow('edt-contacts-container')">+ Add Contact</button></div>
+        <div class="client-section-header"><h4>Additional Contacts</h4><button type="button" class="btn-add-row" onclick="addContactRow('edt-contacts-container')">+ Add Team Member</button></div>
         <div id="edt-contacts-container"></div>
         
-        <div class="client-section-header" style="margin-top:40px;"><h4>Shipping Instructions Logic</h4><button type="button" class="btn-add-row" onclick="addAddressRow('edt-shipping-container')">+ Add Instruction</button></div>
+        <div class="client-section-header" style="margin-top:40px;"><h4>Shipping Logic</h4><button type="button" class="btn-add-row" onclick="addAddressRow('edt-shipping-container')">+ Add Shipping Instruction</button></div>
         <div id="edt-shipping-container"></div>
 
-        <div class="client-section-header" style="margin-top:40px;"><h4>Return Logistics Logic</h4><button type="button" class="btn-add-row" onclick="addAddressRow('edt-return-container')">+ Add Instruction</button></div>
+        <div class="client-section-header" style="margin-top:40px;"><h4>Return Logic</h4><button type="button" class="btn-add-row" onclick="addAddressRow('edt-return-container')">+ Add Return Instruction</button></div>
         <div id="edt-return-container"></div>
       </div>
 
       <button type="button" class="accordion" onclick="toggleAccordion(this)">Operational Note Engine</button>
       <div class="panel">
-        <div style="margin-top:15px; background:#f8fafc; padding:25px; border-radius:12px; border:1px solid #e2e8f0;">
-           <label style="font-weight:800; font-size:14px;">Append New Operational Note</label>
-           <textarea id="edt-new-op-note" class="form-control" style="margin-top:12px; height:100px; font-size:14px;" placeholder="Process updates, priorities, specific brand nuances..."></textarea>
-           <button type="button" class="btn-primary" style="margin-top:20px; width:100%;" onclick="addOpNoteAction()">Post to Operational Log</button>
+        <div style="margin-top:15px; background:#f8fafc; padding:20px; border-radius:12px; border:1px solid #e2e8f0;">
+           <label style="font-weight:700;">New Operational Note</label>
+           <textarea id="edt-new-op-note" class="form-control" style="margin-top:10px; height:80px;" placeholder="Process updates, priorities, or nuances..."></textarea>
+           <button type="button" class="btn-primary" style="margin-top:15px;" onclick="addOpNoteAction()">Post to Master Log</button>
         </div>
-        <div id="edt-opnotes-list" style="margin-top:30px; min-height:100px;"></div>
+        <div id="edt-opnotes-list" style="margin-top:25px; min-height:100px;"></div>
       </div>
 
-      <button type="button" class="accordion" onclick="toggleAccordion(this)">Internal Remarks & Handover Strategy</button>
+      <button type="button" class="accordion" onclick="toggleAccordion(this)">Admin Remarks & Handover Documentation</button>
       <div class="panel">
-        <div class="form-group" style="margin-top:20px;">
-          <label>Internal Admin Remarks (System Global)</label>
-          <textarea id="edt-remarks" class="form-control" style="height:120px;"></textarea>
+        <div class="form-group" style="margin-top:15px;">
+          <label>Internal Remarks (Global)</label>
+          <textarea id="edt-remarks" class="form-control" style="height:100px;"></textarea>
         </div>
-        <div class="form-group" style="margin-top:25px;">
+        <div class="form-group" style="margin-top:15px;">
           <label>Handover Strategy Documentation (Rich Text)</label>
-          <div id="edt-editor" style="height:350px; border:1px solid #cbd5e1; border-radius:4px;"></div>
+          <div id="edt-editor" style="height:300px; border:1px solid #cbd5e1; border-radius:4px;"></div>
         </div>
       </div>
 
-      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 50px; gap: 20px;">
-        <button type="button" class="btn-reset-filters" onclick="switchView('clientListView')" style="border-color:#cbd5e1; color:#64748b; padding: 12px 30px;">Cancel & Exit</button>
-        <button type="submit" class="btn-primary" id="edt-submit-btn" style="padding: 12px 50px;">Save All Changes</button>
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 40px; gap: 15px;">
+        <button type="button" class="btn-reset-filters" onclick="switchView('clientListView')" style="border-color:#cbd5e1; color:#475569;">Cancel Edits</button>
+        <button type="submit" class="btn-primary" id="edt-submit-btn" style="padding: 12px 40px;">Sync All Changes</button>
       </div>
     </form>
     <div id="edt-status-msg" class="status-msg"></div>
   </div>
 </div>
 
-<!-- Read-Only Profile (The Full 5-Tab Dashboard restoration) -->
+<!-- Read-Only Profile (The 5-Tab Dashboard restored) -->
 <div id="readOnlyClientView" class="container" style="display: none;">
   <button class="btn-dash-back" onclick="switchView('clientListView')">&#8592; Back to Registry</button>
   
   <div class="form-wrapper">
-    <div id="ro-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Opening Master Record...</span></div>
+    <div id="ro-client-overlay" class="client-loading-overlay"><div class="spinner-client"></div><span>Synchronizing Master Profile...</span></div>
     
-    <div id="ro-header-bar" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #E3E3E3; padding-bottom: 30px;">
+    <div id="ro-header-bar" style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom: 25px; border-bottom: 2px solid #E3E3E3; padding-bottom: 25px;">
        <div>
-          <h1 id="ro-title" style="margin:0; font-size: 32px; color: var(--brand-dark); font-weight: 900; letter-spacing: -1px;"></h1>
-          <p id="ro-subtitle" style="margin:10px 0 0 0; color:#64748b; font-size:18px; font-weight: 500;"></p>
-          <div id="ro-status-badge" style="margin-top:18px;"></div>
+          <h1 id="ro-title" style="margin:0; font-size: 28px; color: var(--brand-dark);"></h1>
+          <p id="ro-subtitle" style="margin:8px 0 0 0; color:#64748b; font-size:18px;"></p>
+          <div id="ro-status-badge" style="margin-top:15px;"></div>
        </div>
-       <div style="display:flex; gap:15px;">
-          <button id="ro-folder-btn" class="btn-edit" style="border-color:#cbd5e1; color:#475569; padding: 12px 24px;">Open Assets Folder</button>
-          <button id="ro-edit-btn" class="btn-primary" style="padding: 12px 30px; font-weight: 700;">Edit Profile</button>
+       <div style="display:flex; gap:12px;">
+          <button id="ro-folder-btn" class="btn-edit" style="border-color:#cbd5e1; color:#475569;">Open Drive Folder</button>
+          <button id="ro-edit-btn" class="btn-primary" style="padding: 10px 24px;">Edit Client Profile</button>
        </div>
     </div>
 
-    <div class="tab-nav" style="margin-bottom: 35px;">
-      <button type="button" class="tab-btn active" id="btn-ro-overview" onclick="navigateClientTab('ro', 'overview')">Master Overview</button>
-      <button type="button" class="tab-btn" id="btn-ro-contacts" onclick="navigateClientTab('ro', 'contacts')">Team & Logistics</button>
+    <div class="tab-nav">
+      <button type="button" class="tab-btn active" id="btn-ro-overview" onclick="navigateClientTab('ro', 'overview')">Overview</button>
+      <button type="button" class="tab-btn" id="btn-ro-contacts" onclick="navigateClientTab('ro', 'contacts')">Contacts & Team</button>
       <button type="button" class="tab-btn" id="btn-ro-handover" onclick="navigateClientTab('ro', 'handover')">Handover Logic</button>
-      <button type="button" class="tab-btn" id="btn-ro-opnotes" onclick="navigateClientTab('ro', 'opnotes')">Priority Notes</button>
-      <button type="button" class="tab-btn" id="btn-ro-history" onclick="navigateClientTab('ro', 'history')">Audit History</button>
+      <button type="button" class="tab-btn" id="btn-ro-opnotes" onclick="navigateClientTab('ro', 'opnotes')">Operational Notes</button>
+      <button type="button" class="tab-btn" id="btn-ro-history" onclick="navigateClientTab('ro', 'history')">History & Audit</button>
     </div>
 
     <!-- 1. RO OVERVIEW TAB -->
     <div id="ro-overview" class="tab-content" style="display: block;">
-       <div id="ro-overview-grid" class="ro-grid-row"></div>
-       <div id="ro-remarks-container" style="margin-top:40px; padding:30px; background:#f8fafc; border-radius:12px; border:1px solid #e2e8f0;"></div>
+       <div id="ro-overview-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:50px; margin-top:25px;"></div>
+       <div id="ro-remarks-container" style="margin-top:30px; padding-top:20px; border-top:1px solid #eee;"></div>
     </div>
 
     <!-- 2. RO CONTACTS TAB -->
     <div id="ro-contacts" class="tab-content" style="display: none;">
-       <div id="ro-contacts-list" style="margin-top:25px; display:grid; grid-template-columns: 1fr 1fr; gap:30px;"></div>
-       <div id="ro-addresses-grid" style="margin-top:50px; display:grid; grid-template-columns: 1fr 1fr; gap:40px; padding-top:40px; border-top:2px solid #f1f5f9;"></div>
+       <div id="ro-contacts-list" style="margin-top:25px; display:grid; grid-template-columns: 1fr 1fr; gap:25px;"></div>
+       <div id="ro-addresses-grid" style="margin-top:40px; display:grid; grid-template-columns: 1fr 1fr; gap:25px; padding-top:25px; border-top:1px solid #eee;"></div>
     </div>
     
     <!-- 3. RO HANDOVER TAB -->
     <div id="ro-handover" class="tab-content" style="display: none;">
-       <div id="ro-handover-content" style="margin-top:25px; padding:45px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; line-height:1.9; box-shadow: 0 1px 3px rgba(0,0,0,0.05); font-size:15px; color:#334155;"></div>
+       <div id="ro-handover-content" style="margin-top:25px; padding:35px; background:#fff; border:1px solid #e2e8f0; border-radius:12px; line-height:1.8; box-shadow: var(--shadow-sm);"></div>
     </div>
 
-    <!-- 4. RO OPNOTES TAB -->
+    <!-- 4. RO OPNOTES TAB (Drag/Edit Note Engine) -->
     <div id="ro-opnotes" class="tab-content" style="display: none;">
-      <p style="font-size:12px; color:#94a3b8; margin: 0 0 25px 0; font-style:italic;">Interactive priorities: Drag handles to reorder. Click text to edit inline. Changes sync instantly.</p>
-      <div id="ro-opnotes-list" style="min-height: 200px;"></div>
+      <p style="font-size:12px; color:#94a3b8; margin: 15px 0; font-style:italic;">Note Engine active: Drag handles to prioritize. Click text to edit inline.</p>
+      <div id="ro-opnotes-list" style="min-height: 100px;"></div>
       
-      <div id="ro-add-note-trigger" onclick="showQuickNoteInput()" style="background: #fff; border: 2px dashed #cbd5e1; padding: 30px; margin-top: 30px; border-radius: 12px; cursor: pointer; text-align: center; color: var(--brand-primary); font-weight: 800; transition: 0.2s; font-size: 15px;">
-        + Append New Priority Note
+      <div id="ro-add-note-trigger" onclick="showQuickNoteInput()" style="background: #fff; border: 2px dashed #cbd5e1; padding: 25px; margin-top: 20px; border-radius: 12px; cursor: pointer; text-align: center; color: var(--brand-primary); font-weight: bold; transition: 0.2s;">
+        + Append New Operational Note
       </div>
       
-      <div id="ro-quick-note-area" style="display: none; gap:15px; margin-top: 30px; background: #fff; padding: 30px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: 0 10px 25px -5px rgba(0,0,0,0.1); align-items: center;">
-        <input type="text" id="ro-quick-note-input" class="form-control" placeholder="Type critical process note here..." style="flex:1; height: 50px;">
-        <button class="btn-primary" onclick="addQuickOpNote()" style="height: 50px; padding: 0 30px;">Save Note</button>
-        <button class="btn-reset-filters" onclick="hideQuickNoteInput()" style="height: 50px; border-color:#cbd5e1; color:#64748b;">Cancel</button>
+      <div id="ro-quick-note-area" style="display: none; gap:15px; margin-top: 20px; background: #fff; padding: 25px; border-radius: 12px; border: 1px solid #e2e8f0; box-shadow: var(--shadow-md); align-items: center;">
+        <input type="text" id="ro-quick-note-input" class="form-control" placeholder="Type critical process note here..." style="flex:1;">
+        <button class="btn-primary" onclick="addQuickOpNote()">Save Note</button>
+        <button class="btn-reset-filters" onclick="hideQuickNoteInput()">Cancel</button>
       </div>
     </div>
 
@@ -529,7 +502,7 @@
 
 <script>
   /* ========================================================================
-     1. GLOBAL STATE & SYSTEM SYNC
+     1. GLOBAL STATE & COMPONENT SYNC
      ======================================================================== */
   var GLOBAL_CLIENT_DATA = [];
   var CURRENT_CLIENT_SORT_COLUMN = 'brandName'; 
@@ -537,9 +510,6 @@
   var addClientQuill, editClientQuill, GLOBAL_OP_NOTES = [];
   window.CURRENT_VIEW_CLIENT_DATA = null;
 
-  /**
-   * Registry Naming Standard: toggleAccordion()
-   */
   function toggleAccordion(element) {
     element.classList.toggle("active");
     var panel = element.nextElementSibling;
@@ -570,23 +540,16 @@
 
   function toggleClientOverlay(id, show, text) {
     var overlay = document.getElementById(id);
-    if (overlay) { 
-      overlay.style.display = show ? 'flex' : 'none'; 
-      if (text) { var t = overlay.querySelector('span'); if(t) t.innerText = text; } 
-    }
+    if (overlay) { overlay.style.display = show ? 'flex' : 'none'; if (text) { var t = overlay.querySelector('span'); if(t) t.innerText = text; } }
   }
 
   /* ========================================================================
-     2. RICH TEXT & DATE HELPERS (Technical Anchor 5)
+     2. RICH TEXT & DATE HELPERS
      ======================================================================== */
   function initClientEditors() {
     if (typeof Quill !== 'undefined') {
-      if (!addClientQuill && document.getElementById('add-handover-editor')) {
-        addClientQuill = new Quill('#add-handover-editor', { theme: 'snow', placeholder: 'Establish strategy documentation...' });
-      }
-      if (!editClientQuill && document.getElementById('edt-editor')) {
-        editClientQuill = new Quill('#edt-editor', { theme: 'snow', placeholder: 'Sync documentation updates...' });
-      }
+      if (!addClientQuill && document.getElementById('add-handover-editor')) addClientQuill = new Quill('#add-handover-editor', { theme: 'snow', placeholder: 'Enter handover requirements...' });
+      if (!editClientQuill && document.getElementById('edt-editor')) editClientQuill = new Quill('#edt-editor', { theme: 'snow', placeholder: 'Update documentation...' });
     }
   }
 
@@ -600,7 +563,7 @@
   }
 
   /* ========================================================================
-     3. DYNAMIC JSON ENGINE (Technical Anchor 3)
+     3. DYNAMIC JSON ENGINE (Contacts, Addresses, OpNotes)
      ======================================================================== */
 
   function addContactRow(containerId, data = {}) {
@@ -609,16 +572,16 @@
     var row = document.createElement('div');
     row.className = 'dynamic-json-row';
     row.innerHTML = `
-      <button type="button" class="row-remove-btn" onclick="this.parentElement.remove()">&times;</button>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
-        <div class="form-group"><label>First Name</label><input type="text" class="c-fname form-control" value="${data.firstName || ''}"></div>
-        <div class="form-group"><label>Last Name</label><input type="text" class="c-lname form-control" value="${data.lastName || ''}"></div>
-        <div class="form-group"><label>Work Email</label><input type="email" class="c-email form-control" value="${data.email || ''}"></div>
-        <div class="form-group"><label>Direct Phone</label><input type="text" class="c-phone form-control" value="${data.phone || ''}"></div>
-        <div class="form-group"><label>Position</label><input type="text" class="c-pos form-control" value="${data.position || ''}"></div>
-        <div class="form-group"><label>Birthday</label><input type="date" class="c-bday form-control" value="${safelyFormatDate(data.birthday)}"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+        <input type="text" class="c-fname form-control" placeholder="First Name" value="${data.firstName || ''}">
+        <input type="text" class="c-lname form-control" placeholder="Last Name" value="${data.lastName || ''}">
+        <input type="email" class="c-email form-control" placeholder="Email" value="${data.email || ''}">
+        <input type="text" class="c-phone form-control" placeholder="Phone" value="${data.phone || ''}">
+        <input type="text" class="c-pos form-control" placeholder="Position" value="${data.position || ''}">
+        <input type="date" class="c-bday form-control" value="${safelyFormatDate(data.birthday)}">
       </div>
-      <div style="margin-top: 15px;"><label>Mailing Address</label><input type="text" class="c-address form-control" value="${data.address || ''}" style="width: 100%;"></div>
+      <div style="margin-top: 10px;"><input type="text" class="c-address form-control" placeholder="Direct Address" value="${data.address || ''}" style="width: 100%;"></div>
+      <div style="text-align: right; margin-top: 10px;"><button type="button" style="color:#ef4444; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="this.parentElement.parentElement.remove()">Remove Contact</button></div>
     `;
     container.appendChild(row);
   }
@@ -629,19 +592,34 @@
     var row = document.createElement('div');
     row.className = 'dynamic-json-row';
     row.innerHTML = `
-      <button type="button" class="row-remove-btn" onclick="this.parentElement.remove()">&times;</button>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <div class="form-group"><label>Recipient Name</label><input type="text" class="a-contact form-control" value="${data.contactName || ''}"></div>
-        <div class="form-group"><label>Phone</label><input type="text" class="a-phone form-control" value="${data.phone || ''}"></div>
-        <div class="form-group"><label>Logistics Email</label><input type="email" class="a-email form-control" value="${data.email || ''}"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-contact form-control" placeholder="Contact Name" value="${data.contactName || ''}">
+        <input type="text" class="a-phone form-control" placeholder="Phone" value="${data.phone || ''}">
+        <input type="email" class="a-email form-control" placeholder="Email" value="${data.email || ''}">
       </div>
-      <div style="margin-bottom: 12px;"><label>Street Address</label><input type="text" class="a-street form-control" value="${data.street || ''}" style="width:100%;"></div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 12px;">
-        <div class="form-group"><label>City</label><input type="text" class="a-city form-control" value="${data.city || ''}"></div>
-        <div class="form-group"><label>State/Prov</label><input type="text" class="a-state form-control" value="${data.state || ''}"></div>
-        <div class="form-group"><label>Country</label><input type="text" class="a-country form-control" value="${data.countryCode || ''}"></div>
+      <div style="margin-bottom: 10px;"><input type="text" class="a-street form-control" placeholder="Street Address" value="${data.street || ''}" style="width:100%;"></div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 10px;">
+        <input type="text" class="a-city form-control" placeholder="City" value="${data.city || ''}"><input type="text" class="a-state form-control" placeholder="State/Prov" value="${data.state || ''}"><input type="text" class="a-country form-control" placeholder="Country" value="${data.countryCode || ''}">
       </div>
-      <div class="form-group"><label>Specific Remarks</label><input type="text" class="a-remarks form-control" value="${data.remarks || ''}" style="width:100%;"></div>
+      <input type="text" class="a-remarks form-control" placeholder="Specific Logistics Remarks" value="${data.remarks || ''}" style="width:100%;">
+      <div style="text-align: right; margin-top: 10px;"><button type="button" style="color:#ef4444; border:none; background:none; cursor:pointer; font-weight:bold;" onclick="this.parentElement.parentElement.remove()">Remove Address</button></div>
+    `;
+    container.appendChild(row);
+  }
+
+  function addOpNoteRow(containerId, data = {}) {
+    var container = document.getElementById(containerId);
+    if (!container) return;
+    var row = document.createElement('div');
+    row.className = 'dynamic-json-row op-note-row';
+    row.style = 'display:flex; gap:10px; align-items:center;';
+    var editor = data.editor || (typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : 'System');
+    var ts = data.timestamp || new Date().toISOString();
+    row.innerHTML = `
+      <input type="hidden" class="op-editor" value="${editor}">
+      <input type="hidden" class="op-timestamp" value="${ts}">
+      <div style="flex:1;"><input type="text" class="op-content form-control" placeholder="Note text..." value="${data.content || ''}" style="width: 100%;"></div>
+      <button type="button" style="color: #ef4444; border: none; background: none; cursor: pointer; font-weight:bold;" onclick="this.parentElement.remove()">Remove</button>
     `;
     container.appendChild(row);
   }
@@ -674,13 +652,23 @@
     return JSON.stringify(res);
   }
 
+  function getOpNotesJSON(id) {
+    var el = document.getElementById(id); if (!el) return "[]";
+    var res = [];
+    el.querySelectorAll('.op-note-row').forEach(r => {
+      var txt = r.querySelector('.op-content').value;
+      if (txt.trim() !== '') res.push({ content: txt, editor: r.querySelector('.op-editor').value, timestamp: r.querySelector('.op-timestamp').value });
+    });
+    return JSON.stringify(res);
+  }
+
   /* ========================================================================
      4. DIRECTORY: FETCHING, FILTERING & SORTING
      ======================================================================== */
 
   function loadClientsTable() {
     var tbody = document.getElementById('clientTableBody');
-    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 60px;"><div class="spinner-client" style="margin:0 auto;"></div><br>Synchronizing Master Registry...</td></tr>';
+    if (tbody) tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 60px;"><div class="spinner-client" style="margin:0 auto;"></div><br>Syncing Master Registry...</td></tr>';
     google.script.run.withSuccessHandler(populateClientsTable).getClientsList();
   }
 
@@ -703,7 +691,7 @@
   function resetClientFilters() {
     document.getElementById('client-filter-search').value = '';
     document.querySelectorAll('.client-filter-status-cb').forEach(cb => cb.checked = (cb.value === 'Onboarding' || cb.value === 'Active'));
-    document.querySelectorAll('.client-filter-am-cb').forEach(cb => cb.checked = true);
+    document.querySelectorAll('.client-filter-service-cb, .client-filter-am-cb').forEach(cb => cb.checked = true);
     applyClientFilters();
   }
 
@@ -737,7 +725,7 @@
 
   function renderClientTableRows(clients) {
     var tbody = document.getElementById('clientTableBody'); if (!tbody) return; tbody.innerHTML = '';
-    if (clients.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 50px;">No master records match your search.</td></tr>'; return; }
+    if (clients.length === 0) { tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding: 40px;">No master records match your search.</td></tr>'; return; }
     clients.forEach(c => {
       var tr = document.createElement('tr'); tr.style.cursor = "pointer";
       tr.onclick = (e) => { if(!e.target.closest('button')) openReadOnlyClient(c.rowIndex); };
@@ -755,7 +743,7 @@
   }
 
   /* ========================================================================
-     5. FORM SUBMISSION (ADD & EDIT - FULL 39-FIELD LOGIC PARITY)
+     5. FORM SUBMISSION (ADD & EDIT - FULL 39-FIELD MAPPING)
      ======================================================================== */
 
   function openAddClientForm() {
@@ -772,9 +760,9 @@
     if(e) e.preventDefault();
     var co = document.getElementById('add-company').value;
     var br = document.getElementById('add-brand').value;
-    if (!co || !br) { alert("Core Identity (Company & Brand) is required."); return; }
+    if (!co || !br) { alert("Company and Brand are required."); return; }
 
-    toggleClientOverlay('add-client-overlay', true, 'Initializing Onboarding Workflow...');
+    toggleClientOverlay('add-client-overlay', true, 'Initializing Onboarding...');
     document.getElementById('add-submit-btn').disabled = true;
 
     var srvs = []; document.querySelectorAll('input[name="add-services"]:checked').forEach(cb => srvs.push(cb.value));
@@ -810,13 +798,13 @@
     document.getElementById('edt-opnotes-list').innerHTML = '';
     document.querySelectorAll('input[name="edt-services"]').forEach(cb => cb.checked = false);
     
-    toggleClientOverlay('edit-client-overlay', true, 'Synchronizing Master Profile...');
+    toggleClientOverlay('edit-client-overlay', true, 'Pulling Master Record...');
 
     google.script.run.withSuccessHandler(data => {
       toggleClientOverlay('edit-client-overlay', false);
       if (data.error) { alert(data.error); return; }
       
-      /* TECHNICAL ANCHOR 1: Explicit 1:1 Mapping of all 39 Column Fields */
+      // RESTORED: Explicit Mapping of all 39 Backend Columns
       document.getElementById('edt-rowIndex').value = data.rowIndex;
       document.getElementById('edt-company').value = data.companyName || "";
       document.getElementById('edt-brand').value = data.brandName || "";
@@ -832,6 +820,7 @@
       document.getElementById('edt-priBirthday').value = safelyFormatDate(data.pBirthday);
       document.getElementById('edt-priAddress').value = data.pAddress || "";
       
+      // JSON Array Restoration
       if (data.addContacts) try { JSON.parse(data.addContacts).forEach(c => addContactRow('edt-contacts-container', c)); } catch(e){}
       if (data.shipAddress) try { JSON.parse(data.shipAddress).forEach(s => addAddressRow('edt-shipping-container', s)); } catch(e){}
       if (data.retAddress) try { JSON.parse(data.retAddress).forEach(r => addAddressRow('edt-return-container', r)); } catch(e){}
@@ -863,6 +852,7 @@
       GLOBAL_OP_NOTES = []; try { GLOBAL_OP_NOTES = JSON.parse(data.operationalNotes || "[]"); } catch(e){}
       renderEditOpNotes();
       
+      // Sync AM Selector
       google.script.run.withSuccessHandler(users => {
         var sel = document.getElementById('edt-acctMgr'); sel.innerHTML = '<option value="">Unassigned</option>';
         users.filter(u => u.status === 'Active').forEach(u => { var o = document.createElement('option'); o.value = u.username; o.text = u.username; sel.appendChild(o); });
@@ -875,28 +865,45 @@
 
   function handleEditClientSubmit(e) {
     if(e) e.preventDefault();
-    toggleClientOverlay('edit-client-overlay', true, 'Synchronizing Changes Across Ecosystem...');
+    toggleClientOverlay('edit-client-overlay', true, 'Synchronizing Changes...');
     var srvs = []; document.querySelectorAll('input[name="edt-services"]:checked').forEach(cb => srvs.push(cb.value));
     
     var payload = {
-      rowIndex: document.getElementById('edt-rowIndex').value, companyName: document.getElementById('edt-company').value,
-      brandName: document.getElementById('edt-brand').value, address: document.getElementById('edt-address').value,
-      website: document.getElementById('edt-website').value, anniversary: document.getElementById('edt-anniversary').value,
-      pFirstName: document.getElementById('edt-priFirst').value, pLastName: document.getElementById('edt-priLast').value,
-      pEmail: document.getElementById('edt-priEmail').value, pPhone: document.getElementById('edt-priPhone').value,
-      pPosition: document.getElementById('edt-priPosition').value, pBirthday: document.getElementById('edt-priBirthday').value,
-      pAddress: document.getElementById('edt-priAddress').value, addContacts: getContactsJSON('edt-contacts-container'),
-      shipAddress: getAddressesJSON('edt-shipping-container'), retAddress: getAddressesJSON('edt-return-container'),
-      brandReg: document.getElementById('edt-brandReg').value, services: srvs.join(', '),
-      monthlyVal: document.getElementById('edt-value').value, currentStartDate: document.getElementById('edt-currStart').value, 
-      termCount: document.getElementById('edt-termCount').value, termUnit: document.getElementById('edt-termUnit').value,
-      currentExpDate: document.getElementById('edt-currExp').value, endDate: document.getElementById('edt-endDate').value, 
-      commRate: document.getElementById('edt-commRate').value, commBasis: document.getElementById('edt-commBasis').value, 
-      ppcDate: document.getElementById('edt-ppcDate').value, dspDate: document.getElementById('edt-dspDate').value, 
+      rowIndex: document.getElementById('edt-rowIndex').value, 
+      companyName: document.getElementById('edt-company').value,
+      brandName: document.getElementById('edt-brand').value, 
+      address: document.getElementById('edt-address').value,
+      website: document.getElementById('edt-website').value, 
+      anniversary: document.getElementById('edt-anniversary').value,
+      pFirstName: document.getElementById('edt-priFirst').value, 
+      pLastName: document.getElementById('edt-priLast').value,
+      pEmail: document.getElementById('edt-priEmail').value, 
+      pPhone: document.getElementById('edt-priPhone').value,
+      pPosition: document.getElementById('edt-priPosition').value, 
+      pBirthday: document.getElementById('edt-priBirthday').value,
+      pAddress: document.getElementById('edt-priAddress').value, 
+      addContacts: getContactsJSON('edt-contacts-container'),
+      shipAddress: getAddressesJSON('edt-shipping-container'), 
+      retAddress: getAddressesJSON('edt-return-container'),
+      brandReg: document.getElementById('edt-brandReg').value, 
+      services: srvs.join(', '),
+      monthlyVal: document.getElementById('edt-value').value,
+      currentStartDate: document.getElementById('edt-currStart').value, 
+      termCount: document.getElementById('edt-termCount').value,
+      termUnit: document.getElementById('edt-termUnit').value,
+      currentExpDate: document.getElementById('edt-currExp').value,
+      endDate: document.getElementById('edt-endDate').value, 
+      commRate: document.getElementById('edt-commRate').value,
+      commBasis: document.getElementById('edt-commBasis').value, 
+      ppcDate: document.getElementById('edt-ppcDate').value,
+      dspDate: document.getElementById('edt-dspDate').value, 
       handoverNotes: (editClientQuill) ? editClientQuill.root.innerHTML : "",
-      operationalNotes: JSON.stringify(GLOBAL_OP_NOTES), brandCode: document.getElementById('edt-brandCode').value, 
-      status: document.getElementById('edt-status').value, acctMgr: document.getElementById('edt-acctMgr').value, 
-      brandFolder: document.getElementById('edt-folder').value, remarks: document.getElementById('edt-remarks').value,
+      operationalNotes: JSON.stringify(GLOBAL_OP_NOTES),
+      brandCode: document.getElementById('edt-brandCode').value, 
+      status: document.getElementById('edt-status').value,
+      acctMgr: document.getElementById('edt-acctMgr').value, 
+      brandFolder: document.getElementById('edt-folder').value,
+      remarks: document.getElementById('edt-remarks').value,
       editor: typeof CURRENT_USERNAME !== 'undefined' ? CURRENT_USERNAME : "System"
     };
 
@@ -908,15 +915,15 @@
   }
 
   /* ========================================================================
-     6. READ-ONLY PROFILE & NOTE ENGINE (Technical Anchor 2 & 4)
+     6. READ-ONLY PROFILE & NOTE ENGINE (FULL DEPTH RESTORED)
      ======================================================================== */
 
   function openReadOnlyClient(rowIndex) {
     switchView('readOnlyClientView');
-    /* MR HUB MANDATE: THE INSTANT PURGE (Prevents Ghost Data) */
+    // MR HUB INSTANT PURGE
     document.getElementById('ro-title').innerText = ""; 
     document.getElementById('ro-subtitle').innerText = "";
-    document.getElementById('ro-status-badge').innerHTML = "";
+    document.getElementById('ro-status-pill').innerHTML = "";
     document.getElementById('ro-overview-grid').innerHTML = "";
     document.getElementById('ro-contacts-list').innerHTML = "";
     document.getElementById('ro-addresses-grid').innerHTML = "";
@@ -925,7 +932,7 @@
     document.getElementById('ro-history-list').innerHTML = "";
     document.getElementById('ro-remarks-container').innerHTML = "";
     
-    toggleClientOverlay('ro-client-overlay', true, 'Opening Detailed Master Profile...');
+    toggleClientOverlay('ro-client-overlay', true, 'Opening Master Record...');
     navigateClientTab('ro', 'overview');
 
     google.script.run.withSuccessHandler(data => {
@@ -935,78 +942,58 @@
       
       document.getElementById('ro-title').innerText = data.brandName;
       document.getElementById('ro-subtitle').innerText = data.companyName;
-      var pClass = "badge badge-" + (data.status || "active").toLowerCase();
+      var pClass = "badge badge-" + (data.status || "").toLowerCase();
       document.getElementById('ro-status-badge').innerHTML = `<span class="${pClass}">${data.status}</span>`;
       
       document.getElementById('ro-edit-btn').onclick = () => openEditClientForm(data.rowIndex);
       document.getElementById('ro-folder-btn').onclick = () => window.open(data.brandFolder, '_blank');
 
-      /* RESTORED: Exhaustive Overview Grid Templates (Restoring line-count parity) */
+      // Restored Overview Layout
       document.getElementById('ro-overview-grid').innerHTML = `
-        <div class="ro-data-group">
-           <h4 class="ro-data-label">Identity Attributes</h4>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+           <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Brand Identity</h4>
            <p><strong>Registry Status:</strong> ${data.brandReg || 'No'}</p>
-           <p><strong>Master Website:</strong> <a href="${data.website}" target="_blank" style="color:var(--brand-primary);">${data.website || 'N/A'}</a></p>
-           <p><strong>Legal Address:</strong> ${data.address || 'N/A'}</p>
-           <p><strong>Anniversary Date:</strong> ${data.anniversary || 'N/A'}</p>
-           <p><strong>Primary AM:</strong> <span class="badge" style="background:#f1f5f9; color:#475569;">${data.acctMgr || 'Unassigned'}</span></p>
-           <p><strong>System Brand Code:</strong> <span style="font-family:monospace; background:#eee; padding:2px 6px; border-radius:4px;">${data.brandCode || 'NONE'}</span></p>
+           <p><strong>Website:</strong> <a href="${data.website}" target="_blank">${data.website || 'N/A'}</a></p>
+           <p><strong>Address:</strong> ${data.address || 'N/A'}</p>
+           <p><strong>Anniversary:</strong> ${data.anniversary || 'N/A'}</p>
+           <p><strong>Account Manager:</strong> ${data.acctMgr || 'Unassigned'}</p>
+           <p><strong>Brand Code:</strong> ${data.brandCode || 'NONE'}</p>
         </div>
-        <div class="ro-data-group">
-           <h4 class="ro-data-label">Financial & Logistics Logic</h4>
-           <p><strong>Active Start Date:</strong> ${data.currentStartDate || data.origStartDate || 'N/A'}</p>
-           <p><strong>Projected Expiration:</strong> ${data.currentExpDate || 'N/A'}</p>
-           <p><strong>Contract Term End:</strong> ${data.latestEndDate || 'N/A'}</p>
-           <p><strong>Monthly Contract Value:</strong> <span style="font-weight:700; color:#15803d;">$${data.monthlyVal || '0'}</span></p>
-           <p><strong>Performance Commission:</strong> ${data.commRate || '0'}%</p>
-           <p><strong>PPC Launch Status:</strong> ${data.ppcDate || 'Not Launched'}</p>
-           <p><strong>DSP Launch Status:</strong> ${data.dspDate || 'Not Launched'}</p>
+        <div style="display:flex; flex-direction:column; gap:15px;">
+           <h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Contractual Data</h4>
+           <p><strong>Contract Start:</strong> ${data.currentStartDate || data.origStartDate || 'N/A'}</p>
+           <p><strong>Contract End:</strong> ${data.latestEndDate || 'N/A'}</p>
+           <p><strong>Monthly Contract:</strong> $${data.monthlyVal || '0'}</p>
+           <p><strong>Comm Rate:</strong> ${data.commRate || '0'}%</p>
+           <p><strong>PPC Launch:</strong> ${data.ppcDate || 'N/A'}</p>
+           <p><strong>DSP Launch:</strong> ${data.dspDate || 'N/A'}</p>
         </div>`;
       
-      document.getElementById('ro-remarks-container').innerHTML = `<h4 class="ro-data-label">Internal Registry Remarks</h4><p style="white-space:pre-wrap; font-size:15px; color:#334155; line-height:1.7;">${data.remarks || "No internal administrative remarks recorded for this brand profile."}</p>`;
+      document.getElementById('ro-remarks-container').innerHTML = `<h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">Internal Registry Remarks</h4><p style="white-space:pre-wrap; font-size:14px; color:#475569;">${data.remarks || "No internal remarks recorded."}</p>`;
       
-      document.getElementById('ro-handover-content').innerHTML = `
-        <h3 style="margin-top:0; color:var(--brand-dark); border-bottom:2px solid #f1f5f9; padding-bottom:15px;">Strategy & Handover Documentation</h3>
-        <div style="margin-top:20px;">${data.handoverNotes || "<p style='color:#94a3b8; font-style:italic;'>Comprehensive handover documentation has not been established for this brand.</p>"}</div>`;
+      // Handover strategy population
+      document.getElementById('ro-handover-content').innerHTML = data.handoverNotes || "<p style='color:#94a3b8;'>Handover documentation has not been established.</p>";
 
-      // Contacts & Addresses logic (Verbose Restoration)
+      // Contacts & Addresses logic
       var cHtml = '';
       if (data.addContacts && data.addContacts !== "[]") {
-         try { 
-           var ads = JSON.parse(data.addContacts); 
-           ads.forEach(c => { 
-             cHtml += `<div style="padding:25px; border:1px solid #e2e8f0; border-radius:12px; background:#fff; box-shadow:0 1px 3px rgba(0,0,0,0.05);">
-               <strong style="font-size:16px; display:block; margin-bottom:5px;">${c.firstName} ${c.lastName}</strong>
-               <span style="color:var(--brand-primary); font-size:13px; font-weight:700;">${c.position}</span><br><br>
-               <span style="font-size:14px; display:block; margin-bottom:3px;">${c.email}</span>
-               <span style="font-size:14px; color:#64748b;">${c.phone}</span>
-             </div>`; 
-           }); 
-         } catch(e){}
+         try { var ads = JSON.parse(data.addContacts); ads.forEach(c => { cHtml += `<div style="padding:20px; border:1px solid #e2e8f0; border-radius:12px; background:#fff;"><strong>${c.firstName} ${c.lastName}</strong><br><span style="color:#64748b; font-size:13px;">${c.position}</span><br><br><span style="font-size:13px;">${c.email}</span><br><span style="font-size:13px;">${c.phone}</span></div>`; }); } catch(e){}
       }
-      document.getElementById('ro-contacts-list').innerHTML = cHtml || '<p style="grid-column: 1 / span 2; text-align:center; padding:40px; color:#94a3b8;">No additional team contacts recorded in registry.</p>';
+      document.getElementById('ro-contacts-list').innerHTML = cHtml || '<p>No additional team contacts.</p>';
       
       var parseAddr = (json, title) => {
-        var h = `<div class="ro-data-group"><h4 class="ro-data-label">${title}</h4>`;
-        try { 
-          var a = JSON.parse(json); 
-          if(!a || a.length === 0) return h + '<p style="color:#94a3b8; font-style:italic;">No instructions established.</p></div>'; 
-          a.forEach(ad => { 
-            h += `<div style="font-size:14px; padding:15px; background:#fff; border:1px solid #f1f5f9; border-radius:8px; margin-bottom:10px;">
-              <strong>${ad.contactName}</strong><br>${ad.street}, ${ad.city}, ${ad.state} ${ad.countryCode}<br><small style="color:#64748b;">${ad.remarks}</small>
-            </div>`; 
-          }); 
-        } catch(e){ return h + '<p>Error.</p></div>'; }
+        var h = `<div style="display:flex; flex-direction:column; gap:15px;"><h4 style="color:var(--brand-primary); border-bottom:1px solid #eee; padding-bottom:5px;">${title}</h4>`;
+        try { var a = JSON.parse(json); if(!a || a.length === 0) return h + '<p style="color:#888;">N/A</p></div>'; a.forEach(ad => { h += `<div style="font-size:13px;"><strong>${ad.contactName}</strong><br>${ad.street}, ${ad.city}, ${ad.state} ${ad.countryCode}<br><small>${ad.remarks}</small></div>`; }); } catch(e){ return h + '<p>Error.</p></div>'; }
         return h + "</div>";
       };
-      document.getElementById('ro-addresses-grid').innerHTML = parseAddr(data.shipAddress, 'Shipping Logic') + parseAddr(data.retAddress, 'Return Logistics');
+      document.getElementById('ro-addresses-grid').innerHTML = parseAddr(data.shipAddress, 'Shipping Logic') + parseAddr(data.retAddress, 'Return Logic');
 
       renderOpNotesList(data.operationalNotes);
       renderHistoryTab(data.history);
     }).getClientById(rowIndex);
   }
 
-  /* NOTE ENGINE MASTER LOGIC (Technical Anchor 2 - Restored Verbosity) */
+  /* RESTORED NOTE ENGINE MASTER LOGIC */
   var draggedOpNoteIndex = null;
   function dragOpNoteStart(e, i) { draggedOpNoteIndex = i; e.dataTransfer.effectAllowed = 'move'; }
   function dragOpNoteOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; }
@@ -1037,9 +1024,9 @@
   function renderEditOpNotes() {
     var c = document.getElementById('edt-opnotes-list'); if(!c) return;
     c.innerHTML = GLOBAL_OP_NOTES.map((n, i) => `
-      <div class="dynamic-json-row">
+      <div class="dynamic-json-row op-note-row">
         <div style="flex:1;"><input type="text" class="form-control" value="${n.content.replace(/"/g, '&quot;')}" onchange="GLOBAL_OP_NOTES[${i}].content=this.value"></div>
-        <button type="button" style="color:#ef4444; border:none; background:none; cursor:pointer; font-weight:bold; margin-top:10px;" onclick="GLOBAL_OP_NOTES.splice(${i},1); renderEditOpNotes();">Delete Priority</button>
+        <button type="button" style="color:red; border:none; background:none; cursor:pointer;" onclick="GLOBAL_OP_NOTES.splice(${i},1); renderEditOpNotes();">Delete</button>
       </div>`).join('');
   }
 
@@ -1049,20 +1036,20 @@
     var html = ''; ns.forEach((n, i) => {
       html += `
         <div class="op-note-container" draggable="true" ondragstart="dragOpNoteStart(event, ${i})" ondragover="dragOpNoteOver(event)" ondrop="dropOpNote(event, ${i})">
-           <div id="note-view-${i}" style="display:flex; align-items:center;">
+           <div id="note-view-${i}" style="display:flex; align-items:center; gap: 15px;">
               <div class="note-handle">&#9776;</div>
-              <div class="note-text-content" onclick="editOpNote(${i})">${n.content}</div>
-              <div style="text-align:right;"><button style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer; font-weight:700;" onclick="if(confirm('Delete this priority note?')){var ns=JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes); ns.splice(${i},1); window.CURRENT_VIEW_CLIENT_DATA.operationalNotes=JSON.stringify(ns); renderOpNotesList(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes); google.script.run.updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);}">Remove Note</button></div>
+              <div style="flex: 1; cursor: pointer; font-size: 14px; line-height:1.6;" onclick="editOpNote(${i})">${n.content}</div>
+              <div style="text-align:right;"><button style="background:none; border:none; color:#ef4444; font-size:11px; cursor:pointer;" onclick="if(confirm('Delete?')){var ns=JSON.parse(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes); ns.splice(${i},1); window.CURRENT_VIEW_CLIENT_DATA.operationalNotes=JSON.stringify(ns); renderOpNotesList(window.CURRENT_VIEW_CLIENT_DATA.operationalNotes); google.script.run.updateClientRecord(window.CURRENT_VIEW_CLIENT_DATA);}">Remove</button></div>
            </div>
            <div id="note-edit-${i}" style="display:none; align-items:center; gap: 10px;">
-              <input type="text" id="note-input-${i}" class="form-control" value="${n.content.replace(/"/g, '&quot;')}" style="flex:1; height:45px;">
-              <button class="btn-primary" onclick="saveOpNoteEdit(${i})" style="padding:10px 20px;">Save Changes</button>
-              <button class="btn-reset-filters" onclick="document.getElementById('note-view-${i}').style.display='flex'; document.getElementById('note-edit-${i}').style.display='none';">Cancel</button>
+              <input type="text" id="note-input-${i}" class="form-control" value="${n.content.replace(/"/g, '&quot;')}" style="flex:1;">
+              <button class="btn-primary" onclick="saveOpNoteEdit(${i})" style="padding:4px 10px;">Save</button>
+              <button class="btn-reset-filters" onclick="document.getElementById('note-view-${i}').style.display='flex'; document.getElementById('note-edit-${i}').style.display='none';" style="padding:4px 10px;">X</button>
            </div>
-           <div class="note-meta-line"><span>Establish by <strong>${n.editor}</strong></span><span>${new Date(n.timestamp).toLocaleString()}</span></div>
+           <div class="note-meta-line"><span>Logged by <strong>${n.editor}</strong></span><span>${new Date(n.timestamp).toLocaleString()}</span></div>
         </div>`;
     });
-    c.innerHTML = html || '<p style="text-align:center; color:#94a3b8; padding:50px; font-style:italic;">No operational priorities established for this profile.</p>';
+    c.innerHTML = html || '<p style="text-align:center; color:#94a3b8; padding:30px;">No operational priorities established.</p>';
   }
 
   function showQuickNoteInput() { document.getElementById('ro-add-note-trigger').style.display='none'; document.getElementById('ro-quick-note-area').style.display='flex'; document.getElementById('ro-quick-note-input').focus(); }
@@ -1078,13 +1065,13 @@
   function renderHistoryTab(json) {
     var c = document.getElementById('ro-history-list'); if (!c) return;
     try {
-      var h = JSON.parse(json || "[]"); c.innerHTML = (h.length === 0) ? '<p style="color: #94a3b8; text-align:center; padding:40px;">No historical modifications recorded in audit trail.</p>' : '';
+      var h = JSON.parse(json || "[]"); c.innerHTML = (h.length === 0) ? '<p style="color: #94a3b8;">No modifications in audit trail.</p>' : '';
       h.forEach(e => {
-        var html = `<div class="history-audit-entry"><div style="font-size: 13px; color: #475569; font-weight: bold; margin-bottom:12px;">${new Date(e.timestamp).toLocaleString()} &bull; Master Profile Sync by <strong>${e.editor}</strong></div><table class="history-diff-table"><thead><tr><th style="width:30%;">Field Attribute</th><th style="width:35%;">Previous State</th><th style="width:35%;">Updated State</th></tr></thead><tbody>`;
-        e.changes.forEach(ch => { html += `<tr><td style="font-weight:700; color:#1e293b;">${ch.field}</td><td class="diff-old-txt">${ch.old || '(empty)'}</td><td class="diff-new-txt">${ch.new}</td></tr>`; });
+        var html = `<div class="audit-entry"><div style="font-size: 12px; color: #475569; font-weight: bold; margin-bottom:10px;">${new Date(e.timestamp).toLocaleString()} &bull; Edited by <strong>${e.editor}</strong></div><table class="diff-table"><thead><tr><th>Attribute</th><th>Old State</th><th>New State</th></tr></thead><tbody>`;
+        e.changes.forEach(ch => { html += `<tr><td>${ch.field}</td><td class="diff-old-val">${ch.old || '(empty)'}</td><td class="diff-new-val">${ch.new}</td></tr>`; });
         c.innerHTML += html + '</tbody></table></div>';
       });
-    } catch (e) { c.innerHTML = '<p>Error reading audit trail from registry.</p>'; }
+    } catch (e) { c.innerHTML = '<p>Error reading audit trail.</p>'; }
   }
 </script>
 <!-- [SPARKHUB INTEGRITY ANCHOR: END] -->

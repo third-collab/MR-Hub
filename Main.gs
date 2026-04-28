@@ -1,8 +1,23 @@
 /**
- * Entry point for the SparkHub Web Application.
+ * [SPARKHUB INTEGRITY HEADER: START]
+ * FILE: Main.gs
+ * VERSION: 1.3 (Registry Integration)
+ * SYNC STATUS: Fully Synchronized with Settings.gs and Index.html
+ */
+
+/**
+ * Main Initialization Module (Router)
  * Standardized under SparkHub Architecture Blueprint.
- * Handles environment detection, role-based access control, dynamic branding, and theming.
- * @return {HtmlService.HtmlOutput} The evaluated HTML template or a security screen.
+ * * CORE RESPONSIBILITIES:
+ * - Entry point (doGet) for the Web Application.
+ * - Bridges the Module/Plugin Registry from ScriptProperties to the UI.
+ * - Routes to the Installation Wizard or the Modular Dashboard.
+ */
+
+/**
+ * Entry point for the SparkHub Web Application.
+ * Handles environment detection, dynamic branding, and registry-based rendering.
+ * @return {HtmlService.HtmlOutput} The evaluated HTML template.
  */
 function doGet() {
   var props = PropertiesService.getScriptProperties();
@@ -12,95 +27,101 @@ function doGet() {
   // 1. INSTALLATION CHECK
   var isInstalled = (env !== null && env !== "");
   
-  // Fetch dynamic branding/settings
+  // 2. FETCH SYSTEM SETTINGS (Registry + Theme)
   var settings = getSystemSettings();
-  var sysName = settings.systemName;
-  var logoId = settings.systemLogoId;
   
-  // Uses the fast-loading SVG for the web app UI
-  var appFallback = settings.appFallbackLogo;
-  var displayLogoUrl = logoId ? settings.systemLogoUrl : appFallback;
-
-  // 2. APP INITIALIZATION
+  // 3. APP INITIALIZATION
   var template = HtmlService.createTemplateFromFile('Index');
   template.isInstalled = isInstalled;
   template.userEmail = userEmail;
-  template.systemName = sysName;
-  template.systemLogoUrl = displayLogoUrl;
-  template.appFallbackLogo = appFallback;
+  template.systemName = settings.systemName;
   
-  // Inject Dynamic Theme Variables
+  // Pass Registry data to allow Index.html to perform conditional rendering
+  template.installedModules = settings.installedModules;
+  template.installedPlugins = settings.installedPlugins;
+  
+  // Hybrid Logo Logic
+  template.systemLogoUrl = settings.systemLogoId ? settings.systemLogoUrl : settings.appFallbackLogo;
+  template.appFallbackLogo = settings.appFallbackLogo;
+  
+  // Pass Theme Engine variables
   template.themePrimary = settings.themePrimary;
   template.themeAccent = settings.themeAccent;
   template.themeDark = settings.themeDark;
+  template.themeBg = settings.themeBg;
+  template.themeHover = settings.themeHover;
 
+  // 4. SECURITY & PERMISSIONS
+  // 4. SECURITY & PERMISSIONS
   if (isInstalled) {
-    var role = getUserRole(); 
-    if (role === 'Inactive') {
-      return serveAccessDeniedScreen(sysName, displayLogoUrl, appFallback, logoId, settings.systemLogoUrl, settings.themeDark, settings.themePrimary);
+    var role = getUserRole();
+    
+    // ANONYMOUS TRAFFIC ALLOWANCE: If email is blank, treat them as a Guest, not Inactive.
+    if (userEmail === '') {
+      role = 'Guest';
     }
-    template.userRole = role; 
-    template.accountManagers = JSON.stringify(getAccountManagers());
+
+    if (role === 'Inactive') {
+      return serveAccessDeniedScreen(settings);
+    }
+    
+    template.userRole = role;
     template.username = getLoggedInUsername();
+    template.userPermissions = getUserPermissions(role);
   } else {
     template.userRole = "Administrator";
-    template.accountManagers = "[]";
     template.username = userEmail.split('@')[0];
+    template.userPermissions = '{"ALL":["ALL"]}';
   }
   
   var htmlOutput = template.evaluate()
-      .setTitle(sysName)
+      .setTitle(settings.systemName)
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
       
-  // Dynamic Favicon setup
-  if (logoId) {
+  // Set Dynamic Favicon
+  if (settings.systemLogoId) {
     htmlOutput.setFaviconUrl(settings.systemLogoUrl + "&ext=.png");
   } else {
-    htmlOutput.setFaviconUrl(appFallback);
+    htmlOutput.setFaviconUrl(settings.appFallbackLogo);
   }
   
   return htmlOutput;
 }
 
 /**
- * Serves a static HTML error page when a user's account is deactivated.
+ * Serves a branded HTML error page when a user's account is deactivated.
  */
-function serveAccessDeniedScreen(sysName, displayLogoUrl, appFallback, logoId, systemLogoUrl, themeDark, themePrimary) {
+function serveAccessDeniedScreen(s) {
+  var displayLogo = s.systemLogoId ? s.systemLogoUrl : s.appFallbackLogo;
+  
   var errorHtml = `
     <!DOCTYPE html>
     <html>
     <head>
-      <title>${sysName} - Access Denied</title>
+      <title>${s.systemName} - Access Denied</title>
       <style>
-        body { background-color: ${themeDark}; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; }
-        .error-card { background: #FFFFFF; padding: 48px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; max-width: 420px; border-top: 8px solid ${themePrimary}; color: ${themeDark}; }
+        body { background-color: ${s.themeDark}; font-family: 'Inter', sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; color: white; }
+        .error-card { background: #FFFFFF; padding: 48px; border-radius: 24px; box-shadow: 0 20px 50px rgba(0,0,0,0.3); text-align: center; max-width: 420px; border-top: 8px solid ${s.themePrimary}; color: #0F172A; }
         .error-card h1 { margin-top: 0; font-size: 24px; font-weight: 800; }
         .error-card p { opacity: 0.7; line-height: 1.6; font-size: 15px; }
       </style>
     </head>
     <body>
       <div class="error-card">
-        <img src="${displayLogoUrl}" alt="${sysName} Logo" style="height: 64px; margin-bottom: 24px; object-fit: contain;">
+        <img src="${displayLogo}" alt="${s.systemName} Logo" style="height: 64px; margin-bottom: 24px; object-fit: contain;">
         <h1>Access Denied</h1>
-        <p>Your account has been deactivated. You do not have permission to access ${sysName}. Please contact your administrator if you believe this is a mistake.</p>
+        <p>Your account has been deactivated. You do not have permission to access ${s.systemName}. Please contact your administrator.</p>
       </div>
     </body>
     </html>
   `;
   
-  var output = HtmlService.createHtmlOutput(errorHtml)
-      .setTitle(sysName + ' - Access Denied')
-      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-      
-  if (logoId) {
-    output.setFaviconUrl(systemLogoUrl + "&ext=.png");
-  } else {
-    output.setFaviconUrl(appFallback);
-  }
-  
-  return output;
+  return HtmlService.createHtmlOutput(errorHtml)
+      .setTitle(s.systemName + ' - Access Denied')
+      .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL)
+      .setFaviconUrl(s.systemLogoId ? s.systemLogoUrl + "&ext=.png" : s.appFallbackLogo);
 }
 
-function include(filename) {
-  return HtmlService.createHtmlOutputFromFile(filename).getContent();
-}
+/**
+ * [SPARKHUB INTEGRITY ANCHOR: END]
+ */

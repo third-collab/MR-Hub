@@ -1,0 +1,350 @@
+<!-- 
+  [SPARKHUB INTEGRITY HEADER: START]
+  FILE: CalendarData.html
+  VERSION: 1.1 (Standardized Add-on + LiveClock Plugin)
+  SYNC STATUS: Fully Synchronized with Index.html & Master_Succession.md
+-->
+
+<!-- 
+  Calendar Management Module - Frontend
+  Standardized under SparkHub Architecture Blueprint.
+  
+  CORE RESPONSIBILITIES:
+  - System-wide Event Scheduling and Tracking.
+  - Interactive Mini-Calendar for the Header Popup.
+  - Standardized List View with Date-Range filtering.
+  - Plugin: LiveClock (Header Time & Date Injection).
+-->
+
+<style>
+  /* --- Module-Specific CSS (Add-on Isolation) --- */
+  
+  .calendar-loading-overlay {
+    display: none;
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(255, 255, 255, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    border-radius: var(--border-radius-large);
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  #calendarListView .table-container,
+  #addEventView .form-wrapper { 
+    position: relative; 
+    min-height: 400px;
+  }
+
+  /* Mini-Calendar UI (Header Popup) */
+  .cal-popup-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 5px;
+    text-align: center;
+    font-size: 12px;
+    margin-top: 10px;
+  }
+  .cal-popup-day-header { font-weight: 800; color: var(--brand-primary); padding: 5px 0; }
+  .cal-popup-day { padding: 8px 0; border-radius: 6px; cursor: default; color: #475569; }
+  .cal-popup-today { background: var(--brand-primary); color: white; font-weight: bold; }
+  .cal-popup-event-dot { 
+    width: 4px; height: 4px; background: var(--brand-accent); 
+    border-radius: 50%; margin: 2px auto 0 auto; 
+  }
+
+  /* List View Specifics */
+  .event-status-upcoming { color: #2563eb; background: #eff6ff; }
+  .event-status-today { color: #15803d; background: #f0fdf4; font-weight: bold; }
+</style>
+
+<!-- List View: Master Event Directory -->
+<div id="calendarListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  
+  <div class="view-header-bar">
+    <h2>System Calendar</h2>
+    <button class="btn-primary" onclick="openAddEventForm()">+ Schedule Event</button>
+  </div>
+
+  <!-- Standardized Filter Bar (Part III.1) -->
+  <div class="filter-wrapper">
+    <input type="text" id="event-filter-search" class="filter-input" placeholder="Search events or descriptions..." onkeyup="applyCalendarFilters()">
+    <button class="btn-filter-toggle" onclick="toggleFilter('event-adv')">
+       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+       Filters
+    </button>
+  
+    <div id="event-adv" class="filter-advanced">
+      <div class="form-group" style="flex-direction: row; align-items: center; gap: 10px; min-width: 300px;">
+        <label style="white-space:nowrap;">From:</label>
+        <input type="date" id="event-filter-start" class="form-control" onchange="applyCalendarFilters()">
+        <label style="white-space:nowrap;">To:</label>
+        <input type="date" id="event-filter-end" class="form-control" onchange="applyCalendarFilters()">
+      </div>
+
+      <button type="button" class="btn-reset-filters" onclick="resetCalendarFilters()">Reset</button>
+    </div>
+  </div>
+
+  <div class="table-container">
+    <div id="calendar-table-overlay" class="calendar-loading-overlay"><div class="spinner-client"></div><span>Syncing Schedule...</span></div>
+    <table>
+      <thead>
+        <tr>
+          <th class="sortable" onclick="handleCalendarSort('date')">Date <span id="csort-date" class="sort-icon"></span></th>
+          <th>Time</th>
+          <th class="sortable" onclick="handleCalendarSort('eventName')">Event <span id="csort-eventName" class="sort-icon"></span></th>
+          <th>Assigned To</th>
+          <th>Description</th>
+          <th style="text-align:right;">Action</th>
+        </tr>
+      </thead>
+      <tbody id="calendarTableBody">
+        <tr><td colspan="6" style="text-align:center; padding: 30px;">Loading calendar data...</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Add Event Form -->
+<div id="addEventView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('calendarListView')">&#8592; Back to Calendar</button>
+  <div class="form-wrapper">
+    <div id="add-event-overlay" class="calendar-loading-overlay"><div class="spinner-client"></div><span>Saving Event...</span></div>
+    <h2 style="margin-top: 0; color: var(--brand-dark);">Schedule New Event</h2>
+    
+    <form id="addEventForm" onsubmit="handleAddEventSubmit(event)">
+      <button type="button" class="accordion active" onclick="toggleAccordion(this)">Event Logistics</button>
+      <div class="panel" style="display: block;">
+        <div class="form-row" style="margin-top:15px;">
+          <div class="form-group"><label>Event Name *</label><input type="text" id="add-event-name" class="form-control" required></div>
+          <div class="form-group"><label>Assigned To</label><select id="add-event-assigned" class="form-control"></select></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label>Date *</label><input type="date" id="add-event-date" class="form-control" required></div>
+          <div class="form-group"><label>Start Time</label><input type="time" id="add-event-start" class="form-control"></div>
+          <div class="form-group"><label>End Time</label><input type="time" id="add-event-end" class="form-control"></div>
+        </div>
+        <div class="form-group">
+          <label>Description</label>
+          <textarea id="add-event-desc" class="form-control" style="height: 100px;"></textarea>
+        </div>
+      </div>
+
+      <div class="action-buttons" style="display: flex; justify-content: flex-end; margin-top: 30px;">
+        <button type="submit" class="btn-primary" id="add-event-submit">Confirm Event</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Header Popup Container (Mini-Calendar) -->
+<div id="calendar-popup" class="header-popup" style="display:none;">
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+    <button onclick="changeCalendarMonth(-1)" style="background:none; border:none; cursor:pointer; color:var(--brand-primary); font-weight:bold;">&lt;</button>
+    <div id="calendar-popup-header" style="font-weight: 800; color: var(--brand-dark); font-size: 14px;"></div>
+    <button onclick="changeCalendarMonth(1)" style="background:none; border:none; cursor:pointer; color:var(--brand-primary); font-weight:bold;">&gt;</button>
+  </div>
+  <div id="calendar-popup-grid" class="cal-popup-grid"></div>
+  <div style="margin-top: 20px; border-top: 1px solid #eee; padding-top: 15px;">
+    <h5 style="margin:0 0 10px 0; font-size: 11px; text-transform: uppercase; color: #94a3b8;">Today's Agenda</h5>
+    <div id="calendar-popup-agenda" style="max-height: 120px; overflow-y: auto; font-size: 12px; color: #475569;"></div>
+  </div>
+  <button onclick="switchView('calendarListView'); document.getElementById('calendar-popup').style.display='none';" style="width:100%; padding:10px; background:none; border:none; color:var(--brand-primary); cursor:pointer; font-weight:bold; font-size: 12px; margin-top:10px;">Open Full Calendar</button>
+</div>
+
+<script>
+  /* ========================================================================
+     1. GLOBAL STATE & PLUGIN INIT
+     ======================================================================== */
+  var GLOBAL_EVENT_DATA = [];
+  var CURRENT_EVENT_SORT_COLUMN = 'date';
+  var CURRENT_EVENT_SORT_DESC = false;
+  var CAL_DISPLAY_DATE = new Date();
+
+  /**
+   * PLUGIN INIT: Triggered by Index.html on DOM ready.
+   */
+  function initCalendarPlugin() {
+    if (INSTALLED_PLUGINS.includes('LiveClock')) {
+      updateHeaderClock();
+      setInterval(updateHeaderClock, 1000);
+      renderMiniCalendar();
+    }
+  }
+
+  function updateHeaderClock() {
+    var el = document.getElementById('live-clock');
+    if (el) {
+      var now = new Date();
+      el.innerText = now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    }
+  }
+
+  /* ========================================================================
+     2. DIRECTORY: FETCHING, FILTERING & SORTING
+     ======================================================================== */
+
+  function loadCalendarTable() {
+    toggleClientOverlay('calendar-table-overlay', true);
+    google.script.run.withSuccessHandler(function(events) {
+      toggleClientOverlay('calendar-table-overlay', false);
+      GLOBAL_EVENT_DATA = events || [];
+      populateCalendarAMs();
+      applyCalendarFilters();
+    }).getCalendarEvents();
+  }
+
+  function populateCalendarAMs() {
+    var sel = document.getElementById('add-event-assigned');
+    if (sel && sel.innerHTML === "") {
+       try {
+         var ams = JSON.parse(ACCOUNT_MANAGERS || "[]");
+         sel.innerHTML = '<option value="All">All Staff</option>' + ams.map(am => `<option value="${am}">${am}</option>`).join('');
+       } catch(e) { sel.innerHTML = '<option value="System">System</option>'; }
+    }
+  }
+
+  function resetCalendarFilters() {
+    document.getElementById('event-filter-search').value = '';
+    document.getElementById('event-filter-start').value = '';
+    document.getElementById('event-filter-end').value = '';
+    applyCalendarFilters();
+  }
+
+  function applyCalendarFilters() {
+    var sTxt = document.getElementById('event-filter-search').value.toLowerCase();
+    var dStart = document.getElementById('event-filter-start').value;
+    var dEnd = document.getElementById('event-filter-end').value;
+
+    var filtered = GLOBAL_EVENT_DATA.filter(function(ev) {
+      var matchS = (ev.eventName + ev.description + ev.assignedTo).toLowerCase().includes(sTxt);
+      var evDate = ev.date; 
+      var matchD = (!dStart || evDate >= dStart) && (!dEnd || evDate <= dEnd);
+      return matchS && matchD;
+    });
+
+    filtered.sort(function(a, b) {
+      var vA = a[CURRENT_EVENT_SORT_COLUMN] || "";
+      var vB = b[CURRENT_EVENT_SORT_COLUMN] || "";
+      if (vA < vB) return CURRENT_EVENT_SORT_DESC ? 1 : -1;
+      if (vA > vB) return CURRENT_EVENT_SORT_DESC ? -1 : 1;
+      return 0;
+    });
+
+    renderCalendarTableRows(filtered);
+  }
+
+  function renderCalendarTableRows(data) {
+    var tbody = document.getElementById('calendarTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    if (data.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:30px;">No scheduled events found.</td></tr>';
+      return;
+    }
+    data.forEach(function(ev) {
+      var tr = document.createElement('tr');
+      var isToday = ev.date === new Date().toISOString().split('T')[0];
+      var statusClass = isToday ? "event-status-today" : "event-status-upcoming";
+      
+      tr.innerHTML = `
+        <td class="${statusClass}">${ev.date}</td>
+        <td>${ev.startTime || '--:--'} - ${ev.endTime || '--:--'}</td>
+        <td><strong>${ev.eventName}</strong></td>
+        <td><span class="badge" style="background:#f1f5f9; color:#475569;">${ev.assignedTo}</span></td>
+        <td><small>${ev.description || ""}</small></td>
+        <td style="text-align:right;"><button class="btn-edit" onclick="alert('Edit event coming soon')">Edit</button></td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  /* ========================================================================
+     3. HEADER MINI-CALENDAR LOGIC
+     ======================================================================== */
+
+  function changeCalendarMonth(offset) {
+    CAL_DISPLAY_DATE.setMonth(CAL_DISPLAY_DATE.getMonth() + offset);
+    renderMiniCalendar();
+  }
+
+  function renderMiniCalendar() {
+    var grid = document.getElementById('calendar-popup-grid');
+    var header = document.getElementById('calendar-popup-header');
+    if (!grid) return;
+
+    var year = CAL_DISPLAY_DATE.getFullYear();
+    var month = CAL_DISPLAY_DATE.getMonth();
+    var today = new Date();
+    
+    header.innerText = CAL_DISPLAY_DATE.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    grid.innerHTML = ['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<div class="cal-popup-day-header">${d}</div>`).join('');
+    
+    var firstDay = new Date(year, month, 1).getDay();
+    var daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    for (var i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>';
+    
+    google.script.run.withSuccessHandler(function(events) {
+       var agendaEl = document.getElementById('calendar-popup-agenda');
+       var todayStr = today.toISOString().split('T')[0];
+       var todayEvents = events.filter(e => e.date === todayStr);
+       
+       if (agendaEl) {
+         agendaEl.innerHTML = todayEvents.length === 0 ? "No tasks today." : 
+           todayEvents.map(e => `<div style="margin-bottom:8px;"><strong>${e.startTime || ''}</strong> ${e.eventName}</div>`).join('');
+       }
+
+       for (var d = 1; d <= daysInMonth; d++) {
+         var curDateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+         var isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
+         var hasEvent = events.some(e => e.date === curDateStr);
+         
+         var dayDiv = document.createElement('div');
+         dayDiv.className = 'cal-popup-day' + (isToday ? ' cal-popup-today' : '');
+         dayDiv.innerHTML = d + (hasEvent ? '<div class="cal-popup-event-dot"></div>' : '');
+         grid.appendChild(dayDiv);
+       }
+    }).getCalendarEvents();
+  }
+
+  /* ========================================================================
+     4. FORM HANDLERS
+     ======================================================================== */
+
+  function openAddEventForm() {
+    resetAccordions('addEventView');
+    document.getElementById('addEventForm').reset();
+    populateCalendarAMs();
+    switchView('addEventView');
+  }
+
+  function handleAddEventSubmit(e) {
+    if(e) e.preventDefault();
+    toggleClientOverlay('add-event-overlay', true, 'Recording Event...');
+    
+    var payload = {
+      eventName: document.getElementById('add-event-name').value,
+      date: document.getElementById('add-event-date').value,
+      startTime: document.getElementById('add-event-start').value,
+      endTime: document.getElementById('add-event-end').value,
+      description: document.getElementById('add-event-desc').value,
+      assignedTo: document.getElementById('add-event-assigned').value
+    };
+
+    google.script.run.withSuccessHandler(function(res) {
+      toggleClientOverlay('add-event-overlay', false);
+      if (res.includes("Success")) {
+        loadCalendarTable();
+        renderMiniCalendar();
+        switchView('calendarListView');
+      } else { alert(res); }
+    }).processNewEvent(payload);
+  }
+
+</script>
+<!-- [SPARKHUB INTEGRITY ANCHOR: END] -->

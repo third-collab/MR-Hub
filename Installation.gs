@@ -1,205 +1,190 @@
 /**
- * Installation Module - Backend
- * Standardized under SparkHub Architecture Blueprint.
- * * CORE RESPONSIBILITIES:
- * - Provides entry points for UI-based and manual (bootstrap) installation.
- * - Automated setup of the folder hierarchy within the Google Drive Root Folder.
- * - Initialization of the Main and Notification Databases with required headers.
- * - Capture of initial system properties (Admin Email, System Name, Environment).
+ * [SPARKHUB INTEGRITY HEADER: START]
+ * FILE: Installation.gs
+ * VERSION: 1.2 (Registry-Based Modular Installation)
+ * SYNC STATUS: Fully Synchronized with Settings.gs & Master_Succession.md
  */
 
 /**
- * UI INSTALLATION HANDLER
+ * Installation Module - Backend
+ * Standardized under SparkHub Architecture Blueprint.
+ * * CORE RESPONSIBILITIES:
+ * - Orchestrates the "Core" system installation (Folders, Users DB, Templates DB).
+ * - Provides modular entry points for "Add-on" installations (Clients, Notifications, Calendar).
+ * - Manages physical storage hierarchy in Google Drive.
+ */
+
+/**
+ * UI INSTALLATION HANDLER (CORE ONLY)
  * Triggered by the Installation Wizard in Index.html.
- * @param {Object} data - Contains rootId and sysName from the form.
- * @return {string} Success string with reload URL or error message.
+ * Sets the system to "Sandbox" by default upon first install.
  */
 function performUiInstallation(data) {
   try {
     var props = PropertiesService.getScriptProperties();
-    
-    // 1. Set initial properties from the Wizard
     props.setProperty('ROOT_FOLDER_ID', data.rootId);
     props.setProperty('SYSTEM_NAME', data.sysName || 'SparkHub');
+    props.setProperty('ADMIN_EMAIL', Session.getActiveUser().getEmail());
     
-    // 2. Automatically set the installer as the system Admin
-    var adminEmail = Session.getActiveUser().getEmail();
-    props.setProperty('ADMIN_EMAIL', adminEmail);
-    
-    // 3. Execute core installation logic (Folders & Databases)
+    // Executes only Core infrastructure
     runInstallation();
     
-    // 4. Set environment to Sandbox to finalize the process
     props.setProperty('ENVIRONMENT', 'Sandbox');
-    
-    // Return formatted success string for the frontend to parse
     return "Success|" + ScriptApp.getService().getUrl();
-    
   } catch (e) {
-    console.error("UI Installation Error: " + e.message);
     return "Error: " + e.message;
   }
 }
 
 /**
- * BOOTSTRAP FUNCTION
- * Use this in the Apps Script editor if you need to manually initialize 
- * or fix a "Root Folder not set" error.
- */
-function bootstrapSystem() {
-  var manualId = "PASTE_YOUR_FOLDER_ID_HERE"; // Replace this with your actual Folder ID
-  
-  if (manualId === "PASTE_YOUR_FOLDER_ID_HERE" || !manualId) {
-    throw new Error("Please paste your Google Drive Folder ID into the 'manualId' variable inside the script before running.");
-  }
-
-  console.log("Step 1: Manually initializing Root Folder ID...");
-  PropertiesService.getScriptProperties().setProperty('ROOT_FOLDER_ID', manualId);
-  
-  console.log("Step 2: Launching full installation...");
-  runInstallation();
-  
-  // Set default environment if missing
-  if (!PropertiesService.getScriptProperties().getProperty('ENVIRONMENT')) {
-    PropertiesService.getScriptProperties().setProperty('ENVIRONMENT', 'Sandbox');
-  }
-}
-
-/**
- * Main execution logic. 
- * Orchestrates the creation of the storage hierarchy and databases.
+ * CORE INSTALLATION
+ * Sets up the minimum viable infrastructure for the system to boot.
+ * Creates only the Users and Templates sheets.
  */
 function runInstallation() {
   var settings = getSystemSettings();
   var rootId = settings.rootFolderId;
-  
-  if (!rootId) {
-    throw new Error("INSTALLATION HALTED: Root Folder ID not found.");
-  }
+  if (!rootId) throw new Error("INSTALLATION HALTED: Root Folder ID not found.");
   
   try {
     var rootFolder = DriveApp.getFolderById(rootId);
-    console.log("Starting Installation in Root Folder: " + rootFolder.getName());
-
-    // 1. Create/Locate the primary "System Assets" container
     var assetsFolder = getOrCreateFolder(rootFolder, "System Assets");
 
-    // 2. Install core module storage partitions
-    installSettingsFolders(assetsFolder);
-    installUsersFolders(assetsFolder);
-    installTemplatesFolders(assetsFolder);
+    // Core Folder Partitions
+    getOrCreateFolder(getOrCreateFolder(assetsFolder, "Settings"), "Images");
+    getOrCreateFolder(getOrCreateFolder(assetsFolder, "Users"), "Photos");
+    getOrCreateFolder(getOrCreateFolder(assetsFolder, "Templates"), "Emails");
     
-    // 3. Initialize the Databases
-    setupDatabase(rootFolder, "Main");
-    setupDatabase(rootFolder, "Notification");
+    // Core Database Initialization (Users & Templates Only)
+    setupCoreDatabase(rootFolder);
     
-    console.log("SUCCESS: SparkHub core infrastructure is ready.");
-    
+    console.log("SUCCESS: Core infrastructure ready.");
   } catch (e) {
-    console.error("INSTALLATION ERROR: " + e.message);
-    throw new Error("Installation failed. Error: " + e.message);
+    throw new Error("Core installation failed: " + e.message);
   }
 }
 
 /**
- * Sets up Settings module storage.
- * Path: Root > System Assets > Settings > Images
+ * Initializes the Main Database with Core-only sheets (Users, Templates).
  */
-function installSettingsFolders(assetsFolder) {
-  var settingsParent = getOrCreateFolder(assetsFolder, "Settings");
-  getOrCreateFolder(settingsParent, "Images");
-  console.log("> Settings storage initialized (Settings > Images).");
-}
-
-/**
- * Sets up Users module storage.
- * Path: Root > System Assets > Users > Photos
- */
-function installUsersFolders(assetsFolder) {
-  var usersParent = getOrCreateFolder(assetsFolder, "Users");
-  getOrCreateFolder(usersParent, "Photos");
-  console.log("> Users storage initialized (Users > Photos).");
-}
-
-/**
- * Sets up Templates module storage.
- * Path: Root > System Assets > Templates > Documents / Emails
- */
-function installTemplatesFolders(assetsFolder) {
-  var templatesParent = getOrCreateFolder(assetsFolder, "Templates");
-  getOrCreateFolder(templatesParent, "Documents");
-  getOrCreateFolder(templatesParent, "Emails");
-  console.log("> Templates storage initialized (Templates > Documents / Emails).");
-}
-
-/**
- * Creates the master Google Sheet databases and initializes headers.
- * Links the resulting IDs to Script Properties for system-wide access.
- */
-function setupDatabase(rootFolder, type) {
-  var dbName = (type === "Main") ? "SparkHub Database" : "SparkHub Notifications";
+function setupCoreDatabase(rootFolder) {
+  var dbName = "SparkHub Database";
   var files = rootFolder.getFilesByName(dbName);
-  var ss;
-
-  if (files.hasNext()) {
-    ss = SpreadsheetApp.open(files.next());
-    console.log("> Existing " + type + " Database found. Verifying sheets...");
-  } else {
-    ss = SpreadsheetApp.create(dbName);
-    var file = DriveApp.getFileById(ss.getId());
-    file.moveTo(rootFolder);
-    console.log("> New " + type + " Database created in Root Folder.");
+  var ss = files.hasNext() ? SpreadsheetApp.open(files.next()) : SpreadsheetApp.create(dbName);
+  
+  if (!files.hasNext()) {
+    DriveApp.getFileById(ss.getId()).moveTo(rootFolder);
   }
 
-  if (type === "Main") {
-    // SparkHub 1.0 Core Sheet Schema
-    var userHeaders = [
-      "Timestamp", "Username", "Role", "Work Email", "First Name", "Last Name", 
-      "Birthday", "Personal Email", "Phone", "Address", "Facebook URL", 
-      "Profile Photo URL", "Position", "Employment Type", "Date Hired", "Status"
-    ];
-    
-    var templateHeaders = [
-      "ID", "Name", "Category", "Trigger", "Subject", "Body", "Status", "Wrapper"
-    ];
+  // Core Schema: Users
+  var userHeaders = [
+    "Timestamp", "Username", "Role", "Work Email", "First Name", "Last Name", 
+    "Birthday", "Personal Email", "Phone", "Address", "Facebook URL", 
+    "Profile Photo URL", "Position", "Employment Type", "Date Hired", "Status"
+  ];
+  initializeSheet(ss, "Users", userHeaders);
 
-    initializeSheet(ss, "Users", userHeaders);
-    initializeSheet(ss, "Templates", templateHeaders);
-    
-    PropertiesService.getScriptProperties().setProperty('DATABASE_ID', ss.getId());
-  } else {
-    // Notification log sheet
-    var logHeaders = ["Timestamp", "Module", "Event", "Message", "Recipient", "IsRead"];
-    initializeSheet(ss, "Notifications", logHeaders);
-    PropertiesService.getScriptProperties().setProperty('NOTIF_DATABASE_ID', ss.getId());
-  }
+  // Core Schema: Templates
+  var templateHeaders = [
+    "ID", "Name", "Category", "Trigger", "Subject", "Body", "Status", "Wrapper"
+  ];
+  initializeSheet(ss, "Templates", templateHeaders);
+  
+  PropertiesService.getScriptProperties().setProperty('DATABASE_ID', ss.getId());
+}
+
+/* ========================================================================
+   ADD-ON MODULE INSTALLERS (Triggered via Settings Registry)
+   ======================================================================== */
+
+/**
+ * Installs the Clients Module.
+ * Creates the 'Clients' sheet in the Main DB and the 'Clients' Asset folder.
+ */
+function installClients() {
+  var settings = getSystemSettings();
+  var ss = SpreadsheetApp.openById(settings.mainDbId);
+  var rootFolder = DriveApp.getFolderById(settings.rootFolderId);
+  var assetsFolder = getOrCreateFolder(rootFolder, "System Assets");
+
+  // 1. Create Sheet with the full 39-column Architecture
+  var headers = [
+    "Timestamp", "Company Name", "Brand Name", "Address", "Website", "Anniversary", 
+    "P-FirstName", "P-LastName", "P-Email", "P-Phone", "P-Address", "P-Birthday", 
+    "P-Position", "Add-Contacts", "Ship-Address", "Ret-Address", "Brand-Reg", 
+    "Services", "Monthly-Val", "Orig-Start", "Curr-Start", "Term-Count", 
+    "Term-Unit", "Orig-Exp", "Curr-Exp", "Orig-End", "Latest-End", "Comm-Rate", 
+    "Comm-Basis", "PPC-Date", "DSP-Date", "Handover-Notes", "Op-Notes", 
+    "Brand-Code", "Status", "Acct-Mgr", "Folder-URL", "Remarks", "History"
+  ];
+  initializeSheet(ss, "Clients", headers);
+
+  // 2. Create Storage
+  getOrCreateFolder(assetsFolder, "Clients");
+  return true;
 }
 
 /**
- * Helper: Locates a folder by name within a parent, or creates it if missing.
- * Automatically sets the folder to 'Anyone with link' viewer access for UI rendering.
+ * Installs the Notifications Module.
+ * Creates a dedicated Notifications Database file.
+ */
+function installNotifications() {
+  var settings = getSystemSettings();
+  var rootFolder = DriveApp.getFolderById(settings.rootFolderId);
+  var dbName = "SparkHub Notifications";
+  
+  var ss = SpreadsheetApp.create(dbName);
+  DriveApp.getFileById(ss.getId()).moveTo(rootFolder);
+  
+  var headers = [
+    "Timestamp", "Module", "Event", "Message", "Recipient", "IsRead"
+  ];
+  initializeSheet(ss, "Notifications", headers);
+  
+  PropertiesService.getScriptProperties().setProperty('NOTIF_DATABASE_ID', ss.getId());
+  return true;
+}
+
+/**
+ * Installs the Calendar Module.
+ */
+function installCalendar() {
+  var settings = getSystemSettings();
+  var ss = SpreadsheetApp.openById(settings.mainDbId);
+  var rootFolder = DriveApp.getFolderById(settings.rootFolderId);
+  var assetsFolder = getOrCreateFolder(rootFolder, "System Assets");
+
+  // 1. Create Sheet
+  var headers = [
+    "Timestamp", "Event Name", "Date", "Start Time", "End Time", "Description", "Assigned To"
+  ];
+  initializeSheet(ss, "Calendar", headers);
+
+  // 2. Create Storage
+  getOrCreateFolder(assetsFolder, "Calendar");
+  return true;
+}
+
+/* ========================================================================
+   GLOBAL HELPERS
+   ======================================================================== */
+
+/**
+ * Helper to get or create a folder within a parent.
  */
 function getOrCreateFolder(parent, name) {
   var folders = parent.getFoldersByName(name);
-  if (folders.hasNext()) {
-    return folders.next();
-  } else {
-    var newFolder = parent.createFolder(name);
-    newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return newFolder;
-  }
+  if (folders.hasNext()) return folders.next();
+  var newFolder = parent.createFolder(name);
+  newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+  return newFolder;
 }
 
 /**
- * Helper: Ensures a specific sheet exists and contains the correct bold headers.
+ * Helper to initialize a sheet with bold headers and frozen top row.
  */
 function initializeSheet(ss, name, headers) {
-  var sheet = ss.getSheetByName(name);
-  if (!sheet) {
-    sheet = ss.insertSheet(name);
-  }
-  
-  // Set headers only if the sheet is empty to avoid overwriting existing data
+  var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, headers.length)
          .setValues([headers])
@@ -208,3 +193,7 @@ function initializeSheet(ss, name, headers) {
     sheet.setFrozenRows(1);
   }
 }
+
+/**
+ * [SPARKHUB INTEGRITY ANCHOR: END]
+ */

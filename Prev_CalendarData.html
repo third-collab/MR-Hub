@@ -1,0 +1,52 @@
+<!-- 
+  [SPARKHUB INTEGRITY HEADER: START]
+  FILE: CalendarData.html
+  VERSION: 1.0 (Initial Modular Plugin)
+-->
+<!-- UI: List View Container -->
+<div id="calendarListView" class="container" style="display: none;">
+  <button class="btn-dash-back" onclick="switchView('dashboardView')">&#8592; Back to Dashboard</button>
+  <h2>Calendar Management</h2>
+  <div class="form-wrapper"><p>Calendar data engine coming soon...</p></div>
+</div>
+
+<!-- UI: Popup Container (Injected into Header) -->
+<div id="calendar-popup" class="header-popup" style="display:none;">
+  <div id="calendar-header" style="font-weight: bold; text-align: center; margin-bottom: 10px;"></div>
+  <div id="calendar-grid" class="calendar-grid" style="display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 12px;"></div>
+</div>
+
+<script>
+  /**
+   * PLUGIN INIT: Triggered by Index.html on DOM ready.
+   */
+  function initCalendarPlugin() {
+    if (INSTALLED_PLUGINS.includes('LiveClock')) {
+      renderCalendar();
+      updateHeaderClock();
+      setInterval(updateHeaderClock, 1000);
+    }
+  }
+
+  function renderCalendar() {
+    var now = new Date(); var monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    var header = document.getElementById('calendar-header'); if(header) header.innerText = monthNames[now.getMonth()] + " " + now.getFullYear();
+    var grid = document.getElementById('calendar-grid'); if(!grid) return;
+    grid.innerHTML = ['Su','Mo','Tu','We','Th','Fr','Sa'].map(d => `<div style="font-weight:bold;">${d}</div>`).join('');
+    var firstDay = new Date(now.getFullYear(), now.getMonth(), 1).getDay();
+    var daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    for(var i = 0; i < firstDay; i++) grid.innerHTML += '<div></div>';
+    for(var i = 1; i <= daysInMonth; i++) {
+      var isToday = (i === now.getDate()) ? 'background:var(--brand-primary); color:white; border-radius:50%;' : '';
+      grid.innerHTML += `<div style="padding:5px; ${isToday}">${i}</div>`;
+    }
+  }
+
+  function updateHeaderClock() {
+    var el = document.getElementById('live-clock');
+    if (el) el.innerText = new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  }
+
+  function loadCalendarTable() { console.log("Calendar list view data loading..."); }
+</script>
+<!-- [SPARKHUB INTEGRITY ANCHOR: END] -->

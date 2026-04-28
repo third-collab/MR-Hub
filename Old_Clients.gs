@@ -1,11 +1,4 @@
 /**
- * [SPARKHUB INTEGRITY HEADER: START]
- * FILE: Clients.gs
- * VERSION: 1.7 (100% Functional Parity + Standardized Database Handles)
- * SYNC STATUS: Fully Synchronized with Clients.gs.txt Baseline
- */
-
-/**
  * Helper to deep-diff two JSON arrays and return human-readable field-level changes.
  * This correctly tracks exact edits to Phone, Email, Name, Address, etc., 
  * and handles drag/drop reorders silently.
@@ -61,13 +54,13 @@ function diffJson(oldJson, newJson, headerName, type) {
       }
     }
     if (matchIdx > -1) {
-      unmatchedNew.splice(matchIdx, 1); 
+      unmatchedNew.splice(matchIdx, 1); // remove identical matched item
     } else {
       unmatchedOld.push(o);
     }
   }
 
-  // 2. Process remaining unmatched items
+  // 2. Process remaining unmatched items (Tracks in-place edits and additions/removals)
   var maxLen = Math.max(unmatchedOld.length, unmatchedNew.length);
   for (var i = 0; i < maxLen; i++) {
     var o = unmatchedOld[i];
@@ -88,23 +81,30 @@ function diffJson(oldJson, newJson, headerName, type) {
     var itemContext = headerName + " - " + name;
 
     if (o && !n) {
+      // Entire block was deleted
       changes.push({ field: itemContext, old: "Present", new: "Removed" });
     } else if (!o && n) {
+      // Completely new block was added
       changes.push({ field: itemContext, old: "None", new: "Added" });
     } else if (o && n) {
+      // Existing block was edited. Diff properties cleanly.
       var uProps = [];
       Object.keys(o).concat(Object.keys(n)).forEach(function(p) {
         if(uProps.indexOf(p) === -1) uProps.push(p);
       });
       
       uProps.forEach(function(prop) {
-        if (prop === 'editor' || prop === 'timestamp') return; 
+        if (prop === 'editor' || prop === 'timestamp') return; // Skip metadata
         var oVal = String(o[prop] || "").trim();
         var nVal = String(n[prop] || "").trim();
         
         if (oVal !== nVal) {
           var label = fieldLabels[prop] || prop;
-          changes.push({ field: itemContext + " (" + label + ")", old: oVal, new: nVal });
+          changes.push({ 
+            field: itemContext + " (" + label + ")", 
+            old: oVal, 
+            new: nVal 
+          });
         }
       });
     }
@@ -114,11 +114,12 @@ function diffJson(oldJson, newJson, headerName, type) {
 
 /**
  * Fetches the summarized list of clients for the main table view.
- * Standardized handle: getMainDb()
+ * Standardizes data for the frontend to include identifying indexes and Account Manager details.
+ * @return {Array<Object>} List of client objects with essential display fields.
  */
 function getClientsList() {
   try {
-    var sheet = getMainDb().getSheetByName("Clients");
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     var data = sheet.getDataRange().getValues();
     var clients = [];
     
@@ -147,22 +148,25 @@ function getClientsList() {
 }
 
 /**
- * Fetches all details for a specific client by spreadsheet row index.
+ * Fetches all details for a specific client by their spreadsheet row index.
+ * Sanitizes raw Date objects to ISO strings to prevent data transport errors.
+ * @param {number} rowIndex The row index in the spreadsheet.
+ * @return {Object} Detailed client record or error object.
  */
 function getClientById(rowIndex) {
   try {
-    var ss = getMainDb();
-    var sheet = ss.getSheetByName("Clients");
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     if (!sheet) return { error: "Sheet 'Clients' not found." };
     
     var data = sheet.getDataRange().getValues();
     var idx = parseInt(rowIndex, 10);
-    if (isNaN(idx)) return { error: "Row index is invalid: " + rowIndex };
+    if (isNaN(idx)) return { error: "Row index is invalid or undefined: " + rowIndex };
     
     var row = data[idx];
-    if (!row) return { error: "Row " + idx + " is empty." };
+    if (!row) return { error: "Row " + idx + " is completely empty in the spreadsheet." };
 
-    var tz = ss.getSpreadsheetTimeZone();
+    var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
+
     function safeVal(val) {
       if (val instanceof Date) return Utilities.formatDate(val, tz, "yyyy-MM-dd");
       return val === undefined ? "" : val;
@@ -187,26 +191,26 @@ function getClientById(rowIndex) {
       retAddress: safeVal(row[15]), 
       brandReg: safeVal(row[16]), 
       services: safeVal(row[17]), 
-      monthlyVal: safeVal(row[18]), 
-      origStartDate: safeVal(row[19]), 
+      monthlyVal: safeVal(row[18]),
+      origStartDate: safeVal(row[19]),
       currentStartDate: safeVal(row[20]),
-      termCount: safeVal(row[21]), 
-      termUnit: safeVal(row[22]), 
+      termCount: safeVal(row[21]),
+      termUnit: safeVal(row[22]),
       origExpDate: safeVal(row[23]),
-      currentExpDate: safeVal(row[24]), 
-      origEndDate: safeVal(row[25]), 
+      currentExpDate: safeVal(row[24]),
+      origEndDate: safeVal(row[25]),
       latestEndDate: safeVal(row[26]),
-      commRate: safeVal(row[27]), 
-      commBasis: safeVal(row[28]), 
+      commRate: safeVal(row[27]),
+      commBasis: safeVal(row[28]),
       ppcDate: safeVal(row[29]),
-      dspDate: safeVal(row[30]), 
-      handoverNotes: safeVal(row[31]), 
+      dspDate: safeVal(row[30]),
+      handoverNotes: safeVal(row[31]),    
       operationalNotes: safeVal(row[32]), 
-      brandCode: safeVal(row[33]), 
-      status: safeVal(row[34]) || "Active", 
+      brandCode: safeVal(row[33]),
+      status: safeVal(row[34]) || "Active",
       acctMgr: safeVal(row[35]),
-      brandFolder: safeVal(row[36]), 
-      remarks: safeVal(row[37]), 
+      brandFolder: safeVal(row[36]),
+      remarks: safeVal(row[37]),
       history: safeVal(row[38])           
     };
   } catch(e) {
@@ -215,27 +219,20 @@ function getClientById(rowIndex) {
 }
 
 /**
- * Onboards a new client with Drive folder creation and multi-column mapping.
+ * Creates a new client record and triggers automated onboarding notifications.
+ * @param {Object} clientData The data object collected from the Add Client form.
+ * @return {string} Confirmation or error message.
  */
 function processNewClient(clientData) {
   try {
-    var sheet = getMainDb().getSheetByName("Clients");
-    var brand = clientData.brandName || clientData.companyName;
-
-    // DRIVE ENGINE: Dynamic storage allocation
-    var assetsFolder = getSystemSubfolder("System Assets");
-    var clientRoot = getOrCreateFolder(assetsFolder, "Clients");
-    var brandFolder = clientRoot.createFolder(brand);
-    brandFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-
-    // RESTORED: Explicit Onboarding Field Mapping (39-Columns)
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
     var newRow = new Array(39).fill("");
+
     newRow[0] = new Date(); 
     newRow[1] = clientData.companyName;
     newRow[2] = clientData.brandName;
     newRow[3] = clientData.address;
     newRow[4] = clientData.website;
-    newRow[5] = ""; // Anniversary
     newRow[6] = clientData.pFirstName;
     newRow[7] = clientData.pLastName;
     newRow[8] = clientData.pEmail;
@@ -243,69 +240,72 @@ function processNewClient(clientData) {
     newRow[10] = clientData.pAddress;
     newRow[11] = clientData.pBirthday;
     newRow[12] = clientData.pPosition;
-    newRow[13] = clientData.addContacts || "[]"; 
-    newRow[14] = "[]"; // Initial Shipping
-    newRow[15] = "[]"; // Initial Return
+    newRow[13] = clientData.addContacts; 
     newRow[16] = clientData.brandReg; 
     newRow[17] = clientData.services;
     newRow[18] = clientData.monthlyVal;
     
-    newRow[19] = clientData.startDate; // Orig Start
-    newRow[20] = clientData.startDate; // Curr Start
+    newRow[19] = clientData.startDate; 
+    newRow[20] = clientData.startDate; 
     newRow[21] = clientData.termCount; 
     newRow[22] = clientData.termUnit;  
-    newRow[23] = clientData.expDate;   // Orig Exp
-    newRow[24] = clientData.expDate;   // Curr Exp
+    newRow[23] = clientData.expDate;   
+    newRow[24] = clientData.expDate;   
     
-    newRow[25] = ""; // Orig End
-    newRow[26] = ""; // Latest End
-    newRow[27] = ""; // Comm Rate
-    newRow[28] = ""; // Comm Basis
-    newRow[29] = ""; // PPC Date
-    newRow[30] = ""; // DSP Date
     newRow[31] = clientData.handoverNotes; 
-    newRow[32] = "[]"; // Op Notes
-    newRow[33] = ""; // Brand Code
     newRow[34] = "Onboarding"; 
     newRow[35] = "Unassigned"; 
-    newRow[36] = brandFolder.getUrl(); // Sync Drive link
-    newRow[37] = ""; // Remarks
-    newRow[38] = "[]"; // History
 
     sheet.appendRow(newRow);
 
-    logNotification("Clients", "New Client", "A new client (" + brand + ") was added.", "All", ""); 
+    // DIRECT NOTIFICATION CALL (Safeguards removed to guarantee execution)
+    var brand = clientData.brandName || clientData.companyName;
+    try { 
+      logNotification("Clients", "New Client", "A new client (" + brand + ") was added.", "All", ""); 
+    } catch(e) {
+      console.error("Failed to log notification: " + e.message);
+    }
 
+    // DIRECT EMAIL CALL (Safeguards removed to guarantee execution)
     var priContactFull = clientData.pFirstName + " " + clientData.pLastName;
-    var clientDataMap = {
-      "companyName": clientData.companyName || "",
-      "brandName": clientData.brandName || "",
-      "priFirstName": clientData.pFirstName || "",
-      "priContactFull": priContactFull || "",
-      "priEmail": clientData.pEmail || "",
-      "services": clientData.services || "",
-      "monthlyContractValue": clientData.monthlyVal || "",
-      "contractStartDate": clientData.startDate || "",
-      "notes": clientData.handoverNotes || ""
-    };
+    try {
+      var clientDataMap = {
+        "companyName": clientData.companyName || "",
+        "brandName": clientData.brandName || "",
+        "priFirstName": clientData.pFirstName || "",
+        "priContactFull": priContactFull || "",
+        "priEmail": clientData.pEmail || "",
+        "services": clientData.services || "",
+        "monthlyContractValue": clientData.monthlyVal || "",
+        "contractStartDate": clientData.startDate || "",
+        "notes": clientData.handoverNotes || ""
+      };
 
-    if (clientData.pEmail) sendTriggerEmail("Client Welcome Email", clientData.pEmail, clientDataMap);
-    sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
+      if (clientData.pEmail) {
+        sendTriggerEmail("Client Welcome Email", clientData.pEmail, clientDataMap);
+      }
+      
+      sendTriggerEmail("New Client Announcement", "operations@yourbusiness.com", clientDataMap);
+      
+    } catch(e) {
+      return "Success! Client onboarded, but automated emails failed. Ensure 'Client Welcome Email' template is Active. Error: " + e.message;
+    }
 
-    return "Success! Client onboarded and Drive folder initialized.";
+    return "Success! Client onboarded successfully.";
   } catch (error) { 
     return "Error: " + error.toString();
   }
 }
 
 /**
- * Updates client record and performs field-level diff for history log.
+ * Updates an existing client record and generates an automated history log and smart notifications.
+ * @param {Object} clientData The updated client object including the rowIndex.
+ * @return {string} Confirmation or error message.
  */
 function updateClientRecord(clientData) {
   try {
-    var ss = getMainDb();
-    var sheet = ss.getSheetByName("Clients");
-    var tz = ss.getSpreadsheetTimeZone();
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Clients");
+    var tz = SpreadsheetApp.getActiveSpreadsheet().getSpreadsheetTimeZone();
     var data = sheet.getDataRange().getValues();
     var headers = data[0];
     var rowIndex = parseInt(clientData.rowIndex, 10); 
@@ -314,7 +314,6 @@ function updateClientRecord(clientData) {
     var newRow = [...oldRow]; 
     while(newRow.length < 39) { newRow.push(""); } 
 
-    // RESTORED: Full Logic Parity for Update Payload
     newRow[1] = clientData.companyName;
     newRow[2] = clientData.brandName;
     newRow[3] = clientData.address;
@@ -333,16 +332,16 @@ function updateClientRecord(clientData) {
     newRow[16] = clientData.brandReg;
     newRow[17] = clientData.services; 
     newRow[18] = clientData.monthlyVal;
-    
-    newRow[19] = oldRow[19]; // Explicitly preserve original
+
+    newRow[19] = oldRow[19]; 
     newRow[20] = clientData.currentStartDate; 
     newRow[21] = clientData.termCount;
     newRow[22] = clientData.termUnit;
-    newRow[23] = oldRow[23]; // Explicitly preserve original
+    newRow[23] = oldRow[23]; 
     newRow[24] = clientData.currentExpDate;   
 
-    // RESTORED: Anniversary and End-Date preservation logic
-    if (!oldRow[25] || String(oldRow[25]).trim() === "") {
+    var origEndRaw = oldRow[25]; 
+    if (!origEndRaw || String(origEndRaw).trim() === "") {
       newRow[25] = clientData.endDate;
       newRow[26] = clientData.endDate;
     } else {
@@ -362,22 +361,41 @@ function updateClientRecord(clientData) {
     newRow[36] = clientData.brandFolder;       
     newRow[37] = clientData.remarks;           
 
-    // RESTORED: Comprehensive Notification Flags
-    var notifyContactUpdated = false, notifyContractUpdated = false, notifyShipAddress = false, 
-        notifyRetAddress = false, notifyOpNoteAdded = false, notifyOpNoteUpdated = false;
+    // Notification flags
+    var notifyContactUpdated = false;
+    var notifyContractUpdated = false;
+    var notifyShipAddress = false;
+    var notifyRetAddress = false;
+    var notifyOpNoteAdded = false;
+    var notifyOpNoteUpdated = false;
+
+    // Contract Info fields mapping (excluding 17:Services, 20:Current Start Date)
     var contractIndexes = [16, 18, 19, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30]; 
-    var jsonColumnsMap = { 13: 'contacts', 14: 'addresses', 15: 'addresses', 32: 'opnotes' };
+
+    // Map which columns are JSON to trigger the deep field-level diff engine
+    var jsonColumnsMap = {
+      13: 'contacts',
+      14: 'addresses',
+      15: 'addresses',
+      32: 'opnotes'
+    };
 
     var changes = [];
     for (var i = 1; i <= 37; i++) { 
-      var oldVal = (oldRow[i] instanceof Date) ? Utilities.formatDate(oldRow[i], tz, "yyyy-MM-dd") : String(oldRow[i] || "").trim();
-      var newVal = (newRow[i] instanceof Date) ? Utilities.formatDate(newRow[i], tz, "yyyy-MM-dd") : String(newRow[i] || "").trim();
+      var oldValRaw = oldRow[i];
+      var newValRaw = newRow[i];
+      
+      var oldVal = (oldValRaw instanceof Date) ? Utilities.formatDate(oldValRaw, tz, "yyyy-MM-dd") : String(oldValRaw || "").trim();
+      var newVal = (newValRaw instanceof Date) ? Utilities.formatDate(newValRaw, tz, "yyyy-MM-dd") : String(newValRaw || "").trim();
       
       if (oldVal !== newVal) {
-        var headerName = headers[i] || "Field " + i;
+        var headerName = headers[i] || "Column " + (i+1);
+        
         if (jsonColumnsMap[i]) {
           var jChanges = diffJson(oldVal, newVal, headerName, jsonColumnsMap[i]);
           changes = changes.concat(jChanges);
+          
+          // Set notification flags based on JSON changes
           if (i === 13 && jChanges.length > 0) notifyContactUpdated = true;
           if (i === 14 && jChanges.length > 0) notifyShipAddress = true;
           if (i === 15 && jChanges.length > 0) notifyRetAddress = true;
@@ -388,7 +406,9 @@ function updateClientRecord(clientData) {
              });
           }
         } else {
+          // Standard text column comparison
           changes.push({ field: headerName, old: oldVal, new: newVal });
+          
           if (i >= 6 && i <= 12) notifyContactUpdated = true;
           if (contractIndexes.includes(i)) notifyContractUpdated = true;
         }
@@ -398,52 +418,54 @@ function updateClientRecord(clientData) {
     if (changes.length > 0) {
       var historyArray = [];
       try { if (oldRow[38]) historyArray = JSON.parse(oldRow[38]); } catch (e) {} 
-      historyArray.unshift({ timestamp: new Date().toISOString(), editor: clientData.editor || "Unknown User", changes: changes });
+      
+      historyArray.unshift({ 
+        timestamp: new Date().toISOString(), 
+        editor: clientData.editor || "Unknown User",
+        changes: changes 
+      });
       newRow[38] = JSON.stringify(historyArray);
       newRow[0] = new Date(); 
-
-      // RESTORED: Exhaustive Notification logic from Baseline
+      
+      // -- DIRECT DISPATCH SYSTEM NOTIFICATIONS --
       try {
         var brand = clientData.brandName || clientData.companyName;
+        
+        // 1. Status Checks (Paused, Inactive/Offboarded, Resumed, Rejoined)
         var oldStatus = String(oldRow[34]).trim() || "Active";
         var newStatus = String(newRow[34]).trim();
-        
-        // 1. Status Changes
         if (oldStatus !== newStatus) {
-           if (newStatus === "Paused") logNotification("Clients", "Client Paused", brand + " has paused their services.", "All", "");
-           else if (newStatus === "Inactive") logNotification("Clients", "Client Offboarded", brand + " is now inactive.", "All", "");
-           else if (oldStatus === "Paused" && newStatus === "Active") logNotification("Clients", "Client Resumed", brand + " has resumed services.", "All", "");
-           else if (oldStatus === "Inactive" && newStatus === "Active") logNotification("Clients", "Client Rejoined", brand + " has rejoined the active roster.", "All", "");
+          if (newStatus === "Paused") logNotification("Clients", "Client Paused", brand + " has paused their services.", "All", "");
+          else if (newStatus === "Inactive") logNotification("Clients", "Client Offboarded", brand + " is now inactive (offboarded).", "All", "");
+          else if (oldStatus === "Inactive" && newStatus !== "Inactive") logNotification("Clients", "Client Rejoins", brand + " has rejoined (" + newStatus + ").", "All", "");
+          else if (oldStatus === "Paused" && newStatus !== "Paused") logNotification("Clients", "Client Resumes", brand + " has resumed their services (" + newStatus + ").", "All", "");
         }
 
-        // 2. AM Assignment
-        if (String(oldRow[35]).trim() !== String(newRow[35]).trim()) {
-           logNotification("Clients", "Account Manager Assigned", brand + " is now managed by " + newRow[35], "All", "");
-        }
+        // 2. Services Changed
+        if (String(oldRow[17]).trim() !== String(newRow[17]).trim()) logNotification("Clients", "Services Changed", "The services of a client changed (" + brand + ").", "All", "");
 
-        // 3. Folder Changes
-        if (String(oldRow[36]).trim() !== String(newRow[36]).trim()) {
-           logNotification("Clients", "Brand Folder Changed", "The brand folder was changed for " + brand + ".", "All", "");
-        }
+        // 3. Account Manager Assigned
+        if (String(oldRow[35]).trim() !== String(newRow[35]).trim()) logNotification("Clients", "Account Manager Assigned", "A new account manager was assigned to " + brand + ".", "All", "");
 
-        // 4. Aggregated Baseline Updates
+        // 4. Brand Folder Changed
+        if (String(oldRow[36]).trim() !== String(newRow[36]).trim()) logNotification("Clients", "Brand Folder Changed", "The brand folder was changed for " + brand + ".", "All", "");
+
+        // 5. Flag-based Aggregated Updates
         if (notifyOpNoteAdded) logNotification("Clients", "New Operational Note", "A new operational note was added for " + brand + ".", "All", "");
         if (notifyOpNoteUpdated) logNotification("Clients", "Operational Note Updated", "An operational note was updated for " + brand + ".", "All", "");
         if (notifyShipAddress) logNotification("Clients", "Shipping Address Updated", "A shipping address was added or updated for " + brand + ".", "All", "");
         if (notifyRetAddress) logNotification("Clients", "Return Address Updated", "A return address was added or updated for " + brand + ".", "All", "");
         if (notifyContactUpdated) logNotification("Clients", "Contact Info Updated", "A client's contact information was updated (" + brand + ").", "All", "");
         if (notifyContractUpdated) logNotification("Clients", "Contract Info Updated", "Contract information was updated for " + brand + ".", "All", "");
-
-      } catch(e) { console.error("Notification sync error: " + e.message); }
+        
+      } catch(e) { 
+        console.error("Failed to process notifications: " + e.message);
+      }
     }
 
     sheet.getRange(rowIndex + 1, 1, 1, newRow.length).setValues([newRow]);
-    return "Success! Master record synchronized.";
+    return "Success! Client updated.";
   } catch(e) {
     return "Error updating database: " + e.message;
   }
 }
-
-/**
- * [SPARKHUB INTEGRITY ANCHOR: END]
- */

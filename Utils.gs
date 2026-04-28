@@ -1,24 +1,42 @@
 /**
+ * [SPARKHUB INTEGRITY HEADER: START]
+ * FILE: Utils.gs
+ * VERSION: 1.2 (Generalized Base64 Upload Engine)
+ * SYNC STATUS: Fully Synchronized with SystemsGovernance.md
+ */
+
+/**
  * Utility Module - Backend
- * Standardized under MR Hub Architecture Blueprint.
+ * Standardized under SparkHub Architecture Blueprint.
  * Handles: File uploads, subfolder management, and global template helpers.
  */
 
 /**
  * Server-side helper to include separate HTML files into the master template.
- * This allows for a modular code structure while maintaining a single-page app.
- * @param {string} filename - The name of the HTML file to include.
- * @return {string} The raw HTML content of the file.
  */
 function include(filename) {
   return HtmlService.createHtmlOutputFromFile(filename).getContent();
 }
 
 /**
+ * Standardized helper to find or create a folder.
+ * Centralized here to support Installation.gs, Settings.gs, and Clients.gs.
+ */
+function getOrCreateFolder(parentFolder, folderName) {
+  var folders = parentFolder.getFoldersByName(folderName);
+  if (folders.hasNext()) {
+    return folders.next();
+  } else {
+    var newFolder = parentFolder.createFolder(folderName);
+    // Ensure the folder is viewable by the system for UI rendering (e.g. logo/photos)
+    newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    return newFolder;
+  }
+}
+
+/**
  * Dynamically retrieves a subfolder within the configured Root Folder.
- * If the subfolder does not exist, it creates it and sets permissions.
- * @param {string} subfolderName - The name of the folder to locate (e.g., "User Photos").
- * @return {GoogleAppsScript.Drive.Folder} The Drive folder object.
+ * Utilizes getOrCreateFolder to ensure structural integrity.
  */
 function getSystemSubfolder(subfolderName) {
   var settings = getSystemSettings();
@@ -29,47 +47,36 @@ function getSystemSubfolder(subfolderName) {
   }
   
   var rootFolder = DriveApp.getFolderById(rootId);
-  var folders = rootFolder.getFoldersByName(subfolderName);
-  
-  if (folders.hasNext()) {
-    return folders.next();
-  } else {
-    // Automatically create the folder if missing and set public viewing for UI rendering
-    var newFolder = rootFolder.createFolder(subfolderName);
-    newFolder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    return newFolder;
+  return getOrCreateFolder(rootFolder, subfolderName);
+}
+
+/**
+ * GENERIC UPLOAD ENGINE: Decodes a base64 string and saves it to a specified folder.
+ * This is the standardized function for all system file uploads (Logos, Photos, Docs).
+ * * @param {string} base64 - The data URI or raw base64 string.
+ * @param {string} filename - The name to save the file as.
+ * @param {GoogleAppsScript.Drive.Folder} folderObj - The target Drive Folder object.
+ * @return {Object} Contains the permanent Drive URL and File ID.
+ */
+function uploadBase64File(base64, filename, folderObj) {
+  try {
+    var base64Data = base64.split(',')[1] || base64;
+    var decoded = Utilities.base64Decode(base64Data);
+    var blob = Utilities.newBlob(decoded, 'image/png', filename);
+    
+    var file = folderObj.createFile(blob);
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+    
+    return {
+      url: file.getUrl(),
+      id: file.getId()
+    };
+  } catch (e) {
+    console.error("Generic upload error: " + e.message);
+    throw new Error("File Upload Failed: " + e.message);
   }
 }
 
 /**
- * Decodes a base64 image string and saves it as a file in the system's "User Photos" folder.
- * Sets sharing permissions to 'Anyone with link' so the UI can display the photo.
- * @param {string} base64 - The encoded image data from the file input.
- * @param {string} filename - The target name for the file.
- * @return {string} The direct web URL of the uploaded image or an error message.
+ * [SPARKHUB INTEGRITY ANCHOR: END]
  */
-function uploadProfilePhoto(base64, filename) {
-  try {
-    // Locate the target destination folder dynamically under the Root Folder
-    var folder = getSystemSubfolder("User Photos");
-    
-    // Strip base64 header if present (e.g., "data:image/png;base64,")
-    var base64Data = base64.split(',')[1] || base64;
-    
-    // Decode and create the blob
-    var decoded = Utilities.base64Decode(base64Data);
-    var blob = Utilities.newBlob(decoded, 'image/png', filename);
-    
-    // Create the file
-    var file = folder.createFile(blob);
-    
-    // Blueprint Standard: Set permissions so the hub can render the image via thumbnail or URL
-    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
-    
-    return file.getUrl();
-    
-  } catch (e) {
-    console.error("Upload error in Utils.gs: " + e.message);
-    return "Error: " + e.message;
-  }
-}

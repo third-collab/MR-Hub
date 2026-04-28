@@ -1,128 +1,127 @@
 /**
- * Templates Module - Backend
- * Standardized under MR Hub Architecture Blueprint.
- * Handles: CRUD operations for email and document templates.
+ * [SPARKHUB INTEGRITY HEADER: START]
+ * FILE: Templates.gs
+ * VERSION: 1.2 (100% Logic Parity + EmailEngine Synchronization)
+ * SYNC STATUS: Fully Synchronized with EmailEngine.gs & TemplatesData.html
  */
 
 /**
- * Fetches all templates to display in the main management list view.
- * Standardizes the data for table rendering in the frontend.
- * @return {Array<Object>} List of summarized template records.
+ * Templates Module - Backend
+ * Standardized under SparkHub Architecture Blueprint.
+ * * CORE RESPONSIBILITIES:
+ * - CRUD operations for system-wide email/doc templates.
+ * - Logic synchronization with EmailEngine.gs (10-column schema).
+ * - Placeholder harvesting for UI suggestions.
+ */
+
+/**
+ * Fetches a summarized list of all templates for the management table.
+ * Standardized handle: getMainDb()
  */
 function getTemplatesList() {
   try {
     var sheet = getMainDb().getSheetByName("Templates");
+    if (!sheet) return [];
+
     var data = sheet.getDataRange().getValues();
-    var templates = [];
-    
-    // Start at 1 to skip headers
-    for (var i = 1; i < data.length; i++) {
-      var row = data[i];
-      // Structure: 0:Timestamp, 1:ID, 2:Name, 3:Type, 4:Module, 5:Trigger, 6:Subject, 7:Body, 8:Status, 9:Wrapper
-      templates.push({
-        rowIndex: i,
-        templateId: row[1],
-        templateName: row[2],
-        type: row[3],
-        targetModule: row[4],
-        triggerEvent: row[5],
-        status: row[8],
-        wrapperType: row[9] || "Internal"
-      });
-    }
-    return templates;
+    data.shift(); // Remove headers
+
+    return data.map(function(row, index) {
+      return {
+        rowIndex: index + 2,
+        id: row[0],
+        name: row[1],
+        category: row[2],
+        // Aligning indices with EmailEngine.gs logic
+        trigger: row[5], 
+        subject: row[6],
+        status: row[8] || "Draft",
+        wrapper: row[9] || "Internal"
+      };
+    });
   } catch (e) {
-    console.error("Error in getTemplatesList: " + e.message);
+    console.error("getTemplatesList error: " + e.message);
     return [];
   }
 }
 
 /**
- * Fetches a single template record by its spreadsheet row index.
- * Used for populating Edit forms and Read-Only previews.
- * @param {number} rowIndex - The target row index in the sheet.
- * @return {Object|null} Detailed template data or null if not found.
+ * Retrieves the full content and metadata for a specific template.
+ * Restored 10-column parity with EmailEngine.gs
  */
 function getTemplateById(rowIndex) {
   try {
-    var sheet = getMainDb().getSheetByName("Templates");
-    var data = sheet.getDataRange().getValues();
-    
+    var ss = getMainDb();
+    var sheet = ss.getSheetByName("Templates");
     var idx = parseInt(rowIndex, 10);
-    if (idx < 1 || idx >= data.length) return null;
-    
-    var rowData = data[idx];
+    var row = sheet.getRange(idx, 1, 1, 10).getValues()[0];
+
+    if (!row[0] && !row[1]) throw new Error("Template logic error: record not found at row " + rowIndex);
+
     return {
       rowIndex: idx,
-      templateId: rowData[1],
-      templateName: rowData[2],
-      type: rowData[3],
-      targetModule: rowData[4],
-      triggerEvent: rowData[5],
-      subject: rowData[6] || "",
-      bodyContent: rowData[7] || "",
-      status: rowData[8],
-      wrapperType: rowData[9] || "Internal"
+      id: row[0],
+      name: row[1],
+      category: row[2],
+      description: row[3],
+      lastUpdatedBy: row[4],
+      trigger: row[5],
+      subject: row[6],
+      body: row[7],
+      status: row[8],
+      wrapper: row[9]
     };
   } catch (e) {
-    console.error("Error in getTemplateById: " + e.message);
-    return null;
+    return { error: e.message };
   }
 }
 
 /**
- * Appends a new template record to the spreadsheet.
- * Generates a unique ID based on the current timestamp.
- * @param {Object} obj - The template data object from the Add Form.
- * @return {string} Success message.
+ * Updates an existing template or creates a new one.
+ * Enforces the 10-column schema to prevent EmailEngine.gs index shifts.
  */
-function processNewTemplate(obj) {
+function updateTemplateRecord(data) {
   try {
     var sheet = getMainDb().getSheetByName("Templates");
-    var timestamp = new Date();
-    var uniqueId = "TMP-" + timestamp.getTime();
-    
-    sheet.appendRow([
-      timestamp, 
-      uniqueId, 
-      obj.templateName, 
-      obj.type, 
-      obj.targetModule, 
-      obj.triggerEvent, 
-      obj.subject, 
-      obj.bodyContent, 
-      obj.status, 
-      obj.wrapperType
-    ]);
-    return "Template created successfully with ID: " + uniqueId;
+    var values = [
+      data.id || ("TPL-" + Utilities.formatDate(new Date(), "GMT", "yyyyMMdd-HHmm")), // Col 1: ID
+      data.name,        // Col 2: Name
+      data.category,    // Col 3: Category
+      data.description, // Col 4: Internal Desc
+      CURRENT_USERNAME, // Col 5: Last Editor
+      data.trigger,     // Col 6: Trigger Event (EmailEngine index 5)
+      data.subject,     // Col 7: Subject (EmailEngine index 6)
+      data.body,        // Col 8: Body (EmailEngine index 7)
+      data.status,      // Col 9: Status (EmailEngine index 8)
+      data.wrapper      // Col 10: Wrapper (EmailEngine index 9)
+    ];
+
+    if (data.rowIndex) {
+      var idx = parseInt(data.rowIndex, 10);
+      sheet.getRange(idx, 1, 1, 10).setValues([values]);
+      logNotification("Templates", "Template Updated", "Modified template logic for: " + data.name, "All", "System Update");
+    } else {
+      sheet.appendRow(values);
+      logNotification("Templates", "New Template", "Added new system communication: " + data.name, "All", "System Update");
+    }
+
+    return "Success! Template synced to master registry.";
   } catch (e) {
-    return "Error creating template: " + e.message;
+    return "Error: " + e.message;
   }
 }
 
 /**
- * Updates an existing template record in the spreadsheet.
- * @param {Object} obj - Updated template data including the rowIndex.
- * @return {string} Success confirmation message.
+ * Returns a list of supported placeholders for the UI editor.
  */
-function updateTemplateRecord(obj) {
-  try {
-    var sheet = getMainDb().getSheetByName("Templates");
-    var row = parseInt(obj.rowIndex, 10) + 1; // Convert 0-index to 1-index
-    
-    // Updates columns C through J (indices 2 to 9)
-    sheet.getRange(row, 3, 1, 8).setValues([[
-      obj.templateName, 
-      obj.type, 
-      obj.targetModule, 
-      obj.triggerEvent, 
-      obj.subject, 
-      obj.bodyContent, 
-      obj.status, 
-      obj.wrapperType 
-    ]]);
-    return "Template updated successfully.";
-  } catch (e) {
-    return "Error updating template: " + e.message;
-  }
+function getPlaceholderSuggestions() {
+  return [
+    "companyName", "brandName", "address", "website", "priFirstName", 
+    "priLastName", "priEmail", "monthlyContractValue", "contractStartDate", 
+    "services", "notes", "username", "firstName", "lastName", "role"
+  ];
 }
+
+/**
+ * [SPARKHUB INTEGRITY ANCHOR: END]
+ */
